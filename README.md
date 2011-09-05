@@ -1,9 +1,9 @@
 MiniRecord is micro extension for our dear ActiveRecord.
 With it you can add the ability to create columns outside the schema, directly
-in your **model** in a similar way that you just know in others projects 
+in your **model** in a similar way that you just know in others projects
 like  DataMapper or  MongoMapper.
 
-My inspiration come from this handy project: https://github.com/pjhyett/auto_migrations
+My inspiration come from this handy [project](https://github.com/pjhyett/auto_migrations)
 
 ## Features
 
@@ -15,11 +15,13 @@ My inspiration come from this handy project: https://github.com/pjhyett/auto_mig
 ## Instructions
 
 What you need is to move/remove `db/migrations` and `db/schema.rb`.
-It's no more necessary and avoid conflicts.
+It's no more necessary and it avoid conflicts.
 
-Add to your gemfile
+Add to your `Gemfile`:
 
+``` rb
 gem 'mini_record'
+```
 
 That's all!
 
@@ -30,23 +32,23 @@ see [documentation](http://api.rubyonrails.org/classes/ActiveRecord/Migration.ht
 
 ``` rb
 class Person < ActiveRecord::Base
-  properties do |t|
-    t.string  :name
-    t.integer :address_id
+  schema do |s|
+    s.string  :name
+    s.integer :address_id
   end
   belongs_to :address
 end
 
 class Address < ActiveRecord::Base
-  properties, :id => true do |t| # id => true is not really necessary but as
-    t.string  :city              # in +create_table+ you have here the same options
-    t.string  :state
-    t.integer :number
+  schema, :id => true do |s| # id => true is not really necessary but as
+    s.string  :city          # in +create_table+ you have here the same options
+    s.string  :state
+    s.integer :number
   end
 end
 ```
 
-Once you bootstrap your app, missing columns and tables will be created on the fly.
+Once you bootstrap your **app**, missing columns and tables will be created on the fly.
 
 ### Adding a new column
 
@@ -54,16 +56,16 @@ Super easy, open your model and just add it:
 
 ``` rb
 class Person < ActiveRecord::Base
-  properties do |t|
-    t.string  :name
-    t.string  :surname # <<- this
-    t.integer :address_id
+  schema do |s|
+    s.string  :name
+    s.string  :surname # <<- this
+    s.integer :address_id
   end
   belongs_to :address
 end
 ```
 
-So now when you start your webserver you can see an `ALTER TABLE` statement, this mean that your existing
+So now when you start your **webserver** you can see an `ALTER TABLE` statement, this mean that your existing
 records are happy and safe.
 
 ### Removing a column
@@ -86,7 +88,7 @@ ActiveRecord::Base.drop_unused_indexes
 
 # Warning
 
-This software is not tested in a production project, now is only heavy development and if you can
+This software is not yet tested in a production project, now is only heavy development and if you can
 pleas fork it, find bug add a spec and then come back with a pull request. Thanks!
 
 
