@@ -1,5 +1,5 @@
-MiniRecord is micro extension for our dear ActiveRecord.
-With it you can add the ability to create columns outside the schema, directly
+MiniRecord is micro extension for our `ActiveRecord` gem.
+With it you can add the ability to create columns outside the default schema, directly
 in your **model** in a similar way that you just know in others projects
 like  DataMapper or  MongoMapper.
 

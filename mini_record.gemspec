@@ -7,9 +7,13 @@ Gem::Specification.new do |s|
   s.version     = MiniRecord::VERSION
   s.authors     = ["Davide D'Agostino"]
   s.email       = ["d.dagostino@lipsiasoft.com"]
-  s.homepage    = ""
-  s.summary     = %q{TODO: Write a gem summary}
-  s.description = %q{TODO: Write a gem description}
+  s.homepage    = "https://github.com/DAddYE/mini_record"
+  s.summary     = %q{MiniRecord is a micro gem that allow you to write schema inside your model as you can do in DataMapper.}
+  s.description = %q{
+    With it you can add the ability to create columns outside the default schema, directly
+    in your model in a similar way that you just know in others projects
+    like  DataMapper or  MongoMapper.
+  }.gsub(/^ {4}/, '')
 
   s.rubyforge_project = "mini_record"
 
