@@ -5,8 +5,8 @@ ActiveRecord::Base.establish_connection(:adapter => 'sqlite3', :database => ':me
 # ActiveRecord::Base.logger = Logger.new($stdout)
 
 class Person < ActiveRecord::Base
-  properties do |p|
-    p.string :name
+  schema do |s|
+    s.string :name
   end
 
   # Testing purpose

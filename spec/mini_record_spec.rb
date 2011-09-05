@@ -14,7 +14,7 @@ describe MiniRecord do
 
     # Add a column without lost data
     Person.class_eval do
-      properties do |p|
+      schema do |p|
         p.string :name
         p.string :surname
       end
@@ -29,7 +29,7 @@ describe MiniRecord do
 
     # Remove a column without lost data
     Person.class_eval do
-      properties do |p|
+      schema do |p|
         p.string :name
       end
     end
@@ -41,7 +41,7 @@ describe MiniRecord do
 
     # Change column without lost data
     Person.class_eval do
-      properties do |p|
+      schema do |p|
         p.text :name
       end
     end

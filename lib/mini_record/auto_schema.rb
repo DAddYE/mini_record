@@ -1,18 +1,19 @@
 require 'mini_record/auto_migrations'
 
 module MiniRecord
-  module Properties
+  module AutoSchema
     def self.included(base)
       base.extend(ClassMethods)
       base.send(:include, MiniRecord::AutoMigrations)
     end
 
     module ClassMethods
-      def properties(options={}, &block)
+      def schema(options={}, &block)
         auto_create_table(table_name, options, &block)
         reset_column_information
       end
-      alias :keys :properties
+      alias :keys :schema
+      alias :properties :schema
     end
-  end # Properties
+  end # AutoSchema
 end # MiniRecord
