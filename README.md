@@ -1,9 +1,9 @@
-MiniRecord is micro extension for our `ActiveRecord` gem.
+MiniRecord is a micro extension for our `ActiveRecord` gem.
 With it you can add the ability to create columns outside the default schema, directly
 in your **model** in a similar way that you just know in others projects
 like  DataMapper or  MongoMapper.
 
-My inspiration come from this handy [project](https://github.com/pjhyett/auto_migrations)
+My inspiration come from this handy [project](https://github.com/pjhyett/auto_migrations).
 
 ## Features
 
@@ -72,7 +72,7 @@ records are happy and safe.
 
 It's exactly the same, but the column will be _really_ deleted without affect other columns.
 
-### Changing a column
+### Change columns
 
 It's not possible for us know when/what column you have renamed, but we can know if you changed the `type` so
 if you change `t.string :name` to `t.text :name` we are be able to perform an `ALTER TABLE`
@@ -86,7 +86,7 @@ ActiveRecord::Base.drop_unused_tables
 ActiveRecord::Base.drop_unused_indexes
 ```
 
-# Warning
+# Warnings
 
 This software is not yet tested in a production project, now is only heavy development and if you can
 pleas fork it, find bug add a spec and then come back with a pull request. Thanks!
