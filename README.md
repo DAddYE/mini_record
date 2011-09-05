@@ -86,7 +86,7 @@ ActiveRecord::Base.drop_unused_tables
 ActiveRecord::Base.drop_unused_indexes
 ```
 
-# Warnings
+## Warnings
 
 This software is not yet tested in a production project, now is only heavy development and if you can
 pleas fork it, find bug add a spec and then come back with a pull request. Thanks!
