@@ -39,13 +39,30 @@ class Person < ActiveRecord::Base
   belongs_to :address
 end
 
+# you can use also this way
 class Address < ActiveRecord::Base
-  schema, :id => true do |s| # id => true is not really necessary but as
-    s.string  :city          # in +create_table+ you have here the same options
-    s.string  :state
-    s.integer :number
-  end
+  key.string  :city
+  key.string  :state
+  key.integer :number
+  has_many :people
 end
+
+# or this
+class Address < ActiveRecord::Base
+  col.string  :city
+  col.string  :state
+  col.integer :number
+  has_many :people
+end
+
+# or this
+class Address < ActiveRecord::Base
+  property.string  :city
+  property.string  :state
+  property.integer :number
+  has_many :people
+end
+
 ```
 
 Once you bootstrap your **app**, missing columns and tables will be created on the fly.
@@ -63,6 +80,14 @@ class Person < ActiveRecord::Base
   end
   belongs_to :address
 end
+
+# or if you use others ways
+class Person < ActiveRecord::Base
+  col.string  :name
+  col.string  :surname # <<- this
+  col.integer :address_id
+  belongs_to :address
+end
 ```
 
 So now when you start your **webserver** you can see an `ALTER TABLE` statement, this mean that your existing
@@ -76,15 +101,6 @@ It's exactly the same, but the column will be _really_ deleted without affect ot
 
 It's not possible for us know when/what column you have renamed, but we can know if you changed the `type` so
 if you change `t.string :name` to `t.text :name` we are be able to perform an `ALTER TABLE`
-
-### Drop unused tables/indexes
-
-You can do it by hand but if yours are lazy like mine you can simply invoke:
-
-``` rb
-ActiveRecord::Base.drop_unused_tables
-ActiveRecord::Base.drop_unused_indexes
-```
 
 ## Warnings
 
