@@ -38,6 +38,7 @@ class Person < ActiveRecord::Base
   end
   belongs_to :address
 end
+Person.auto_upgrade!
 
 # you can use also this way
 class Address < ActiveRecord::Base
@@ -63,6 +64,7 @@ class Address < ActiveRecord::Base
   has_many :people
 end
 
+Address.auto_upgrade!
 ```
 
 Once you bootstrap your **app**, missing columns and tables will be created on the fly.
