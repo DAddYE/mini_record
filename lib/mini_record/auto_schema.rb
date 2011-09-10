@@ -5,11 +5,21 @@ module MiniRecord
     end
 
     module ClassMethods
+
       def table_definition
+        return superclass.table_definition unless superclass == ActiveRecord::Base
+
         @_table_definition ||= begin
           tb = ActiveRecord::ConnectionAdapters::TableDefinition.new(connection)
           tb.primary_key(primary_key)
+          tb
         end
+      end
+
+      def indexes
+        return superclass.indexes unless superclass == ActiveRecord::Base
+
+        @_indexes ||= {}
       end
 
       def col(column_name, options={})
@@ -17,12 +27,12 @@ module MiniRecord
         table_definition.send(type, column_name, options)
         column_name = table_definition.columns[-1].name
         case index_name = options.delete(:index)
-        when Hash
-          add_index(options.delete(:column) || column_name, index_name)
-        when TrueClass
-          add_index(column_name)
-        when String, Symbol, Array
-          add_index(index_name)
+          when Hash
+            add_index(options.delete(:column) || column_name, index_name)
+          when TrueClass
+            add_index(column_name)
+          when String, Symbol, Array
+            add_index(index_name)
         end
       end
       alias :key :col
@@ -32,13 +42,16 @@ module MiniRecord
       def reset_table_definition!
         @_table_definition = nil
       end
+      alias :reset_schema! :reset_table_definition!
 
       def schema
         reset_table_definition!
         yield table_definition
+        table_definition
       end
       alias :keys :schema
       alias :properties :schema
+      alias :fields :schema
 
       def add_index(column_name, options={})
         index_name = connection.index_name(table_name, :column => column_name)
@@ -46,10 +59,6 @@ module MiniRecord
         index_name
       end
       alias :index :add_index
-
-      def indexes
-        @_indexes ||= {}
-      end
 
       def auto_upgrade!
         # Table doesn't exist, create it
@@ -72,6 +81,12 @@ module MiniRecord
           hash[column.name.to_s] = column
           hash
         end
+
+        # Add to schema inheritance column if necessary
+        if descendants.present? && !fields_in_schema.include?(inheritance_column.to_s)
+          table_definition.column inheritance_column, :string
+        end
+
 
         # Remove fields from db no longer in schema
         (fields_in_db.keys - fields_in_schema.keys & fields_in_db.keys).each do |field|

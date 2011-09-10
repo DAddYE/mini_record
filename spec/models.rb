@@ -52,3 +52,9 @@ class Animal < ActiveRecord::Base
   key :name, :index => true
   index :id
 end
+
+class Pet < ActiveRecord::Base
+  include SpecHelper
+
+  key :name, :index => true
+end

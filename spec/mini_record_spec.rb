@@ -106,4 +106,60 @@ describe MiniRecord do
     Animal.db_columns.must_include "category_id"
     Animal.db_indexes.must_equal((indexes_was << "index_animals_on_category_id").sort)
   end
+
+  it 'works with STI' do
+    class Dog < Pet; end
+    class Cat < Pet; end
+    Pet.auto_upgrade!
+
+    # Check inheritance column
+    Pet.db_columns.wont_include "type"
+    Dog.auto_upgrade!
+    Pet.db_columns.must_include "type"
+
+    # Now, let's we know if STI is working
+    Pet.create(:name => "foo")
+    Dog.create(:name => "bar")
+    Dog.count.must_equal 1
+    Dog.first.name.must_equal "bar"
+    Pet.count.must_equal 2
+    Pet.all.map(&:name).must_equal ["foo", "bar"]
+
+    # Check that this doesn't break things
+    Cat.auto_upgrade!
+    Dog.first.name.must_equal "bar"
+
+    # What's happen if we change schema?
+    Dog.table_definition.must_equal Pet.table_definition
+    Dog.indexes.must_equal Pet.indexes
+    Dog.class_eval do
+      key :bau
+    end
+    Dog.auto_upgrade!
+    Pet.db_columns.must_include "bau"
+    Dog.new.must_respond_to :bau
+    Cat.new.must_respond_to :bau
+  end
+
+  it 'works with custom inheritance column' do
+    class User < ActiveRecord::Base
+      key :name
+      key :surname
+      key :role
+      set_inheritance_column :role
+    end
+    class Administrator < User; end
+    class Customer < User; end
+
+    User.auto_upgrade!
+    Administrator.create(:name => "Davide", :surname => "D'Agostino")
+    Customer.create(:name => "Foo", :surname => "Bar")
+    Administrator.count.must_equal 1
+    Administrator.first.name.must_equal "Davide"
+    Customer.count.must_equal 1
+    Customer.first.name.must_equal "Foo"
+    User.count.must_equal 2
+    User.first.role.must_equal "Administrator"
+    User.last.role.must_equal "Customer"
+  end
 end
