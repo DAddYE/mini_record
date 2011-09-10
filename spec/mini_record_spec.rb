@@ -74,8 +74,8 @@ describe MiniRecord do
     # Remove a column
     Post.reset_table_definition!
     Post.class_eval do
-      key.string :name
-      key.references :category
+      key :name
+      key :category, :as => :references
     end
     Post.auto_upgrade!
     post = Post.first
@@ -100,8 +100,7 @@ describe MiniRecord do
 
     # Add a new index
     Animal.class_eval do
-      key.integer :category_id
-      index :category_id
+      key :category, :as => :references, :index => true
     end
     Animal.auto_upgrade!
     Animal.db_columns.must_include "category_id"

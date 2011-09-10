@@ -11,9 +11,23 @@ module MiniRecord
           tb.primary_key(primary_key)
         end
       end
-      alias :col :table_definition
-      alias :key :table_definition
-      alias :property :table_definition
+
+      def col(column_name, options={})
+        type = options.delete(:as) || options.delete(:type) || :string
+        table_definition.send(type, column_name, options)
+        column_name = table_definition.columns[-1].name
+        case index_name = options.delete(:index)
+        when Hash
+          add_index(options.delete(:column) || column_name, index_name)
+        when TrueClass
+          add_index(column_name)
+        when String, Symbol, Array
+          add_index(index_name)
+        end
+      end
+      alias :key :col
+      alias :property :col
+      alias :field :col
 
       def reset_table_definition!
         @_table_definition = nil

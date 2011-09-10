@@ -1,7 +1,7 @@
 require 'logger'
 
 ActiveRecord::Base.establish_connection(:adapter => 'sqlite3', :database => ':memory:')
-# ActiveRecord::Base.logger = BufferedLogger.new($stdout)
+# ActiveRecord::Base.logger = ActiveSupport::BufferedLogger.new($stdout)
 
 module SpecHelper
   def self.included(base)
@@ -33,23 +33,22 @@ end
 class Post < ActiveRecord::Base
   include SpecHelper
 
-  key.string :title
-  key.string :body
-  key.references :category
+  key :title
+  key :body
+  key :category, :as => :references
   belongs_to :category
 end
 
 class Category < ActiveRecord::Base
   include SpecHelper
 
-  key.string :title
+  key :title
   has_many :posts
 end
 
 class Animal < ActiveRecord::Base
   include SpecHelper
 
-  key.string :name
+  key :name, :index => true
   index :id
-  index :name
 end
