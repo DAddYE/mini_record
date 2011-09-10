@@ -31,18 +31,6 @@ Remember that inside properties you can use all migrations methods,
 see [documentation](http://api.rubyonrails.org/classes/ActiveRecord/Migration.html)
 
 ``` rb
-class Person < ActiveRecord::Base
-  schema do |s|
-    s.string  :name
-    s.integer :address_id
-  end
-  add_index :address_id
-
-  belongs_to :address
-end
-Person.auto_upgrade!
-
-# you can use also this SEXY way
 class Post < ActiveRecord::Base
   key :title
   key :permalink, :index => true, :limit => 50
@@ -86,17 +74,6 @@ Indexes and columns present in the db but **not** in your model schema will be *
 Super easy, open your model and just add it:
 
 ``` rb
-class Person < ActiveRecord::Base
-  schema do |s|
-    s.string  :name
-    s.string  :surname # <<- this
-    s.integer :address_id
-  end
-  belongs_to :address
-end
-Person.auto_upgrade!
-
-# or you can use a more interesting way
 class Post < ActiveRecord::Base
   key :title
   key :body, :as => :text # <<- this
