@@ -26,6 +26,17 @@ module MiniRecord
       alias :keys :schema
       alias :properties :schema
 
+      def add_index(column_name, options={})
+        index_name = connection.index_name(table_name, :column => column_name)
+        indexes[index_name] = options.merge(:column => column_name)
+        index_name
+      end
+      alias :index :add_index
+
+      def indexes
+        @_indexes ||= {}
+      end
+
       def auto_upgrade!
         # Table doesn't exist, create it
         unless connection.tables.include?(table_name)
@@ -92,6 +103,20 @@ module MiniRecord
 
             # Change the column if applicable
             connection.change_column table_name, field, new_type, new_attr if changed
+          end
+        end
+
+        # Remove old index
+        indexes_in_db = connection.indexes(table_name).map(&:name)
+        (indexes_in_db - indexes.keys).each do |name|
+          connection.remove_index(table_name, :name => name)
+        end
+
+        # Add indexes
+        indexes.each do |name, options|
+          options = options.dup
+          unless connection.indexes(table_name).detect { |i| i.name == name }
+            connection.add_index(table_name, options.delete(:column), options)
           end
         end
 

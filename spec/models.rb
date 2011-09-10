@@ -1,8 +1,7 @@
 require 'logger'
 
 ActiveRecord::Base.establish_connection(:adapter => 'sqlite3', :database => ':memory:')
-# ActiveRecord::Base.connection.tables.each { |t| ActiveRecord::Base.connection.drop_table(t) }
-# ActiveRecord::Base.logger = Logger.new($stdout)
+# ActiveRecord::Base.logger = BufferedLogger.new($stdout)
 
 module SpecHelper
   def self.included(base)
@@ -11,11 +10,15 @@ module SpecHelper
 
   module ClassMethods
     def db_columns
-      connection.columns(table_name).map(&:name)
+      connection.columns(table_name).map(&:name).sort
+    end
+
+    def db_indexes
+      connection.indexes(table_name).map(&:name).sort
     end
 
     def schema_columns
-      table_definition.columns.map { |c| c.name.to_s }
+      table_definition.columns.map { |c| c.name.to_s }.sort
     end
   end
 end
@@ -41,4 +44,12 @@ class Category < ActiveRecord::Base
 
   key.string :title
   has_many :posts
+end
+
+class Animal < ActiveRecord::Base
+  include SpecHelper
+
+  key.string :name
+  index :id
+  index :name
 end

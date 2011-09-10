@@ -36,6 +36,8 @@ class Person < ActiveRecord::Base
     s.string  :name
     s.integer :address_id
   end
+  add_index :address_id
+
   belongs_to :address
 end
 Person.auto_upgrade!
@@ -45,6 +47,8 @@ class Address < ActiveRecord::Base
   key.string  :city
   key.string  :state
   key.integer :number
+  index :city
+
   has_many :people
 end
 
@@ -53,6 +57,8 @@ class Address < ActiveRecord::Base
   col.string  :city
   col.string  :state
   col.integer :number
+  add_index :city
+
   has_many :people
 end
 
@@ -61,6 +67,8 @@ class Address < ActiveRecord::Base
   property.string  :city
   property.string  :state
   property.integer :number
+  add_index :city
+
   has_many :people
 end
 
@@ -104,11 +112,20 @@ It's exactly the same, but the column will be _really_ deleted without affect ot
 It's not possible for us know when/what column you have renamed, but we can know if you changed the `type` so
 if you change `t.string :name` to `t.text :name` we are be able to perform an `ALTER TABLE`
 
+### Add/Remove indexes
+
+In the same ways we manage columns MiniRecord will detect new indexes and indexes that needs to be removed.
+So when you perform `MyModel.auto_upgrade!` a statement like:
+
+``` SQL
+PRAGMA index_info('index_people_on_name')
+CREATE INDEX "index_people_on_surname" ON "people" ("surname")
+```
+
 ## Warnings
 
 This software is not yet tested in a production project, now is only heavy development and if you can
 pleas fork it, find bug add a spec and then come back with a pull request. Thanks!
-
 
 ## Author
 
