@@ -55,7 +55,7 @@ describe MiniRecord do
     person.name.must_equal 'foo'
   end
 
-  it 'has #key,col,property inside model' do
+  it 'has #key,col,property,attribute inside model' do
     ActiveRecord::Base.connection.table_exists?(Post.table_name).must_equal false
     ActiveRecord::Base.connection.table_exists?(Category.table_name).must_equal false
     Post.auto_upgrade!; Category.auto_upgrade!
@@ -74,8 +74,8 @@ describe MiniRecord do
     # Remove a column
     Post.reset_table_definition!
     Post.class_eval do
-      key :name
-      key :category, :as => :references
+      col :name
+      col :category, :as => :references
     end
     Post.auto_upgrade!
     post = Post.first
@@ -100,7 +100,7 @@ describe MiniRecord do
 
     # Add a new index
     Animal.class_eval do
-      key :category, :as => :references, :index => true
+      col :category, :as => :references, :index => true
     end
     Animal.auto_upgrade!
     Animal.db_columns.must_include "category_id"
@@ -133,7 +133,7 @@ describe MiniRecord do
     Dog.table_definition.must_equal Pet.table_definition
     Dog.indexes.must_equal Pet.indexes
     Dog.class_eval do
-      key :bau
+      col :bau
     end
     Dog.auto_upgrade!
     Pet.db_columns.must_include "bau"
@@ -143,9 +143,9 @@ describe MiniRecord do
 
   it 'works with custom inheritance column' do
     class User < ActiveRecord::Base
-      key :name
-      key :surname
-      key :role
+      col :name
+      col :surname
+      col :role
       set_inheritance_column :role
     end
     class Administrator < User; end

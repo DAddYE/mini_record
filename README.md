@@ -32,15 +32,15 @@ see [documentation](http://api.rubyonrails.org/classes/ActiveRecord/Migration.ht
 
 ``` rb
 class Post < ActiveRecord::Base
-  key :title
-  key :permalink, :index => true, :limit => 50
-  key :comments_count, :as => :integer
-  key :category, :as => :references, :index => true
+  col :title
+  col :permalink, :index => true, :limit => 50
+  col :comments_count, :as => :integer
+  col :category, :as => :references, :index => true
 end
 Post.auto_upgrade!
 ```
 
-If you don't like `key` there are also few aliases: `col, field, property`
+If you don't like `col` there are also few aliases: `key, field, property, attribute`
 
 Instead of `:as => :my_type` you can use `:type => :my_type`
 
@@ -58,8 +58,8 @@ You can provide others ActiveRecord options like:
 
 # example
 class Foo < ActiveRecord::Base
-  key :title, :default => "MyTitle" # :as => :string is by default
-  key :price, :as => :decimal, :scale => 8, :precision => 2
+  col :title, :default => "MyTitle" # :as => :string is by default
+  col :price, :as => :decimal, :scale => 8, :precision => 2
 end
 ```
 
@@ -75,11 +75,11 @@ Super easy, open your model and just add it:
 
 ``` rb
 class Post < ActiveRecord::Base
-  key :title
-  key :body, :as => :text # <<- this
-  key :permalink, :index => true
-  key :comments_count, :as => :integer
-  key :category, :as => :references, :index => true
+  col :title
+  col :body, :as => :text # <<- this
+  col :permalink, :index => true
+  col :comments_count, :as => :integer
+  col :category, :as => :references, :index => true
 end
 Post.auto_upgrade!
 ```
@@ -110,10 +110,10 @@ Note that writing it in DSL way you have same options as `add_index` so you are 
 
 ``` rb
 class Fox < ActiveRecord::Base
-  key :foo, :index => true
-  key :foo, :index => :custom_name
-  key :foo, :index => [:foo, :bar]
-  key :foo, :index => { :column => [:branch_id, :party_id], :unique => true, :name => 'by_branch_party' }
+  col :foo, :index => true
+  col :foo, :index => :custom_name
+  col :foo, :index => [:foo, :bar]
+  col :foo, :index => { :column => [:branch_id, :party_id], :unique => true, :name => 'by_branch_party' }
 end
 ```
 
@@ -121,7 +121,7 @@ That is the same of:
 
 ``` rb
 class Fox < ActiveRecord::Base
-  key :foo
+  col :foo
   add_index :foo
   add_index :custom_name
   add_index [:foo, :bar]

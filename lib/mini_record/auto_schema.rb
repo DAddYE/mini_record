@@ -38,6 +38,7 @@ module MiniRecord
       alias :key :col
       alias :property :col
       alias :field :col
+      alias :attribute :col
 
       def reset_table_definition!
         @_table_definition = nil
@@ -52,6 +53,7 @@ module MiniRecord
       alias :keys :schema
       alias :properties :schema
       alias :fields :schema
+      alias :attributes :schema
 
       def add_index(column_name, options={})
         index_name = connection.index_name(table_name, :column => column_name)
