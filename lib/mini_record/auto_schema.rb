@@ -22,17 +22,20 @@ module MiniRecord
         @_indexes ||= {}
       end
 
-      def col(column_name, options={})
+      def col(*args)
+        options = args.extract_options!
         type = options.delete(:as) || options.delete(:type) || :string
-        table_definition.send(type, column_name, options)
-        column_name = table_definition.columns[-1].name
-        case index_name = options.delete(:index)
-          when Hash
-            add_index(options.delete(:column) || column_name, index_name)
-          when TrueClass
-            add_index(column_name)
-          when String, Symbol, Array
-            add_index(index_name)
+        args.each do |column_name|
+          table_definition.send(type, column_name, options)
+          column_name = table_definition.columns[-1].name
+          case index_name = options.delete(:index)
+            when Hash
+              add_index(options.delete(:column) || column_name, index_name)
+            when TrueClass
+              add_index(column_name)
+            when String, Symbol, Array
+              add_index(index_name)
+          end
         end
       end
       alias :key :col

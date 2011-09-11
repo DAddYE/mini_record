@@ -162,4 +162,18 @@ describe MiniRecord do
     User.first.role.must_equal "Administrator"
     User.last.role.must_equal "Customer"
   end
+
+  it 'allow multiple columns definitions' do
+    class Fake < ActiveRecord::Base
+      col :name, :surname
+      col :category, :group, :as => :references
+    end
+    Fake.auto_upgrade!
+    Fake.create(:name => 'foo', :surname => 'bar', :category_id => 1, :group_id => 2)
+    fake = Fake.first
+    fake.name.must_equal 'foo'
+    fake.surname.must_equal 'bar'
+    fake.category_id.must_equal 1
+    fake.group_id.must_equal 2
+  end
 end
