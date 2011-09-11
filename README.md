@@ -32,7 +32,8 @@ see [documentation](http://api.rubyonrails.org/classes/ActiveRecord/Migration.ht
 
 ``` rb
 class Post < ActiveRecord::Base
-  col :title
+  col :title_en, :title_jp
+  col :description_en, :description_jp, :as => :text
   col :permalink, :index => true, :limit => 50
   col :comments_count, :as => :integer
   col :category, :as => :references, :index => true
@@ -44,7 +45,7 @@ If you don't like `col` there are also few aliases: `key, field, property, attri
 
 Instead of `:as => :my_type` you can use `:type => :my_type`
 
-Option `:as` or `:type` if not provided are `:string`, you can use all ActiveRecord types:
+Option `:as` or `:type` if not provided is `:string` by default, you can use all ActiveRecord types:
 
 ``` rb
 :primary_key, :string, :text, :integer, :float, :decimal, :datetime, :timestamp, :time, :date, :binary, :boolean
@@ -68,6 +69,10 @@ for more details.
 
 Finally, when you execute `MyModel.auto_upgrade!`, missing columns, indexes and tables will be created on the fly.
 Indexes and columns present in the db but **not** in your model schema will be **deleted*** also in your db.
+
+### Single Table Inheritance
+
+MiniRecord as ActiveRecord support STI plus some goodness, see our specs for more details.
 
 ### Adding a new column
 
