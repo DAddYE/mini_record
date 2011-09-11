@@ -23,6 +23,8 @@ module MiniRecord
       end
 
       def col(*args)
+        return unless connection?
+
         options = args.extract_options!
         type = options.delete(:as) || options.delete(:type) || :string
         args.each do |column_name|
@@ -65,7 +67,16 @@ module MiniRecord
       end
       alias :index :add_index
 
+      def connection?
+        !!connection
+      rescue Exception => e
+        puts "\e[31m%s\e[0m" % e.message.strip
+        false
+      end
+
       def auto_upgrade!
+        return unless connection?
+
         # Table doesn't exist, create it
         unless connection.tables.include?(table_name)
           # TODO: Add to create_table options
