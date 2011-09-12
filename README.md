@@ -1,3 +1,6 @@
+[![Build Status](https://secure.travis-ci.org/DAddYE/mini_record.png)](http://travis-ci.org/DAddYE/mini_record)
+
+
 MiniRecord is a micro extension for our `ActiveRecord` gem.
 With MiniRecord you can add the ability to create columns outside the default `schema.rb`, directly
 in your **model** in a similar way that should know in others projects
@@ -136,8 +139,8 @@ end
 
 ## Warnings
 
-This software is not yet tested in a production project, now is only heavy development and if you can
-pleas fork it, find bug add a spec and then come back with a pull request. Thanks!
+This software is not super well tested in a production project.
+Im stated to using it in two customer's projects without any problem.
 
 ## Author
 
