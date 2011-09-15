@@ -1,7 +1,9 @@
-require File.expand_path('../spec_helper.rb', __FILE__)
-require File.expand_path('../models.rb', __FILE__)
-
 describe MiniRecord do
+  before do
+    ActiveRecord::Base.descendants.each do |active_record|
+      ActiveRecord::Base.connection.drop_table active_record.table_name if active_record.table_exists?
+    end
+  end
 
   it 'has #schema inside model' do
     # For unknown reason separate specs doesn't works
@@ -9,8 +11,8 @@ describe MiniRecord do
     Person.auto_upgrade!
     Person.table_name.must_equal 'people'
     Person.db_columns.sort.must_equal %w[id name]
-    Person.column_names.must_equal Person.db_columns
-    Person.column_names.must_equal Person.schema_columns
+    Person.column_names.sort.must_equal Person.db_columns
+    Person.column_names.sort.must_equal Person.schema_columns
     person = Person.create(:name => 'foo')
     person.name.must_equal 'foo'
     proc { person.surname }.must_raise NoMethodError
@@ -29,7 +31,7 @@ describe MiniRecord do
     person.surname.must_be_nil
     person.update_attribute(:surname, 'bar')
     Person.db_columns.sort.must_equal %w[id name surname]
-    Person.column_names.must_equal Person.db_columns
+    Person.column_names.sort.must_equal Person.db_columns
 
     # Remove a column without lost data
     Person.class_eval do
@@ -42,8 +44,8 @@ describe MiniRecord do
     person.name.must_equal 'foo'
     proc { person.surname }.must_raise NoMethodError
     Person.db_columns.sort.must_equal %w[id name]
-    Person.column_names.must_equal Person.db_columns
-    Person.column_names.must_equal Person.schema_columns
+    Person.column_names.sort.must_equal Person.db_columns
+    Person.column_names.sort.must_equal Person.schema_columns
 
     # Change column without lost data
     Person.class_eval do
@@ -108,12 +110,9 @@ describe MiniRecord do
   end
 
   it 'works with STI' do
-    class Dog < Pet; end
-    class Cat < Pet; end
     Pet.auto_upgrade!
-
-    # Check inheritance column
-    Pet.db_columns.wont_include "type"
+    Pet.reset_column_information
+    Pet.db_columns.must_include "type"
     Dog.auto_upgrade!
     Pet.db_columns.must_include "type"
 
@@ -142,15 +141,6 @@ describe MiniRecord do
   end
 
   it 'works with custom inheritance column' do
-    class User < ActiveRecord::Base
-      col :name
-      col :surname
-      col :role
-      set_inheritance_column :role
-    end
-    class Administrator < User; end
-    class Customer < User; end
-
     User.auto_upgrade!
     Administrator.create(:name => "Davide", :surname => "D'Agostino")
     Customer.create(:name => "Foo", :surname => "Bar")
@@ -164,10 +154,6 @@ describe MiniRecord do
   end
 
   it 'allow multiple columns definitions' do
-    class Fake < ActiveRecord::Base
-      col :name, :surname
-      col :category, :group, :as => :references
-    end
     Fake.auto_upgrade!
     Fake.create(:name => 'foo', :surname => 'bar', :category_id => 1, :group_id => 2)
     fake = Fake.first
@@ -175,5 +161,60 @@ describe MiniRecord do
     fake.surname.must_equal 'bar'
     fake.category_id.must_equal 1
     fake.group_id.must_equal 2
+  end
+  
+  it 'allows non-integer primary keys' do
+    Vegetable.auto_upgrade!
+    Vegetable.primary_key.must_equal 'latin_name'
+  end
+  
+  it 'properly creates primary key columns so that ActiveRecord uses them' do
+    Vegetable.auto_upgrade!
+    Vegetable.delete_all
+    n = 'roobus roobious'
+    v = Vegetable.new; v.latin_name = n; v.save!
+    Vegetable.find(n).must_equal v
+  end
+  
+  it 'automatically shortens long index names' do
+    AutomobileMakeModelYearVariant.auto_upgrade!
+    AutomobileMakeModelYearVariant.db_indexes.first.start_with?('index_automobile_make_model_ye').must_equal true
+  end
+  
+  it 'properly creates primary key columns that are unique' do
+    Vegetable.auto_upgrade!
+    Vegetable.delete_all
+    n = 'roobus roobious'
+    v = Vegetable.new; v.latin_name = n; v.save!
+    if sqlite?
+      flunk # segfaults
+      # lambda { v = Vegetable.new; v.latin_name = n; v.save! }.must_raise(SQLite3::ConstraintException)
+    else
+      lambda { v = Vegetable.new; v.latin_name = n; v.save! }.must_raise(ActiveRecord::RecordNotUnique)
+    end
+  end
+  
+  it 'is idempotent' do
+    ActiveRecord::Base.descendants.each do |active_record|
+      active_record.auto_upgrade!
+      active_record.reset_column_information
+      before = [ active_record.db_columns, active_record.db_indexes ]
+      active_record.auto_upgrade!
+      active_record.reset_column_information
+      [ active_record.db_columns, active_record.db_indexes ].must_equal before
+      active_record.auto_upgrade!
+      active_record.reset_column_information
+      active_record.auto_upgrade!
+      active_record.reset_column_information
+      active_record.auto_upgrade!
+      active_record.reset_column_information
+      [ active_record.db_columns, active_record.db_indexes ].must_equal before    
+    end
+  end
+  
+  private
+  
+  def sqlite?
+    ActiveRecord::Base.connection.adapter_name =~ /sqlite/i
   end
 end
