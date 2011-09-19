@@ -80,9 +80,26 @@ module MiniRecord
           name[0..(connection.index_name_length-11)] + ::Zlib.crc32(name).to_s
         end
       end
+      
+      def sqlite?
+        connection.adapter_name =~ /sqlite/i
+      end
+      
+      def mysql?
+        connection.adapter_name =~ /mysql/i
+      end
+      
+      def postgresql?
+        connection.adapter_name =~ /postgresql/i
+      end
 
-      def auto_upgrade!
+      def auto_upgrade!(create_table_options = '')
         return unless connection?
+        
+        # normally activerecord's mysql adapter does this
+        if mysql?
+          create_table_options ||= 'ENGINE=InnoDB'
+        end
 
         non_standard_primary_key = if (primary_key_column = table_definition.columns.detect { |column| column.name.to_s == primary_key.to_s })
           primary_key_column.type != :primary_key
@@ -93,28 +110,28 @@ module MiniRecord
         end
 
         # Table doesn't exist, create it
-        unless connection.tables.include?(table_name)
-          # TODO: Add to create_table options
-          class << connection; attr_accessor :table_definition; end unless connection.respond_to?(:table_definition=)
-          connection.table_definition = table_definition
+        unless connection.table_exists? table_name
+          
+          # avoid using connection.create_table because in 3.0.x it ignores table_definition
+          # and it also is too eager about adding a primary key column
+          create_sql = "CREATE TABLE "
+          create_sql << "#{quoted_table_name} ("
+          create_sql << table_definition.to_sql
+          create_sql << ") #{create_table_options}"
+          connection.execute create_sql
           
           if non_standard_primary_key
-            connection.create_table(table_name, :id => false)
-            case connection.adapter_name
-            when /sqlite/i
+            if sqlite?
               add_index primary_key, :unique => true
-            when /mysql/i, /postgresql/i
-              # can't use add_index method because it won't let you do "PRIMARY KEY"
+            elsif mysql? or postgresql?
+            # can't use add_index method because it won't let you do "PRIMARY KEY"
               connection.execute "ALTER TABLE #{quoted_table_name} ADD PRIMARY KEY (#{quoted_primary_key})"
             else
               raise RuntimeError, "mini_record doesn't support non-standard primary keys for the #{connection.adapter_name} adapter!"
             end
-          else
-            connection.create_table table_name
           end
-          reset_column_information
 
-          connection.table_definition = ActiveRecord::ConnectionAdapters::TableDefinition.new(connection)
+          reset_column_information
         end
 
         # Add to schema inheritance column if necessary
