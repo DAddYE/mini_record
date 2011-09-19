@@ -142,6 +142,10 @@ end
 This software is not super well tested in a production project.
 Im stated to using it in two customer's projects without any problem.
 
+## TODO
+
+* reduce the number of methods we add to ActiveRecord::Base objects
+
 ## Author
 
 DAddYE, you can follow me on twitter [@daddye](http://twitter.com/daddye) or take a look at my site [daddye.it](http://www.daddye.it)
