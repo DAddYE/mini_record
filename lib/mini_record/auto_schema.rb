@@ -1,18 +1,17 @@
+require 'zlib'
 module MiniRecord
   module AutoSchema
     def self.included(base)
       base.extend(ClassMethods)
     end
-
+    
     module ClassMethods
 
       def table_definition
         return superclass.table_definition unless superclass == ActiveRecord::Base
 
         @_table_definition ||= begin
-          tb = ActiveRecord::ConnectionAdapters::TableDefinition.new(connection)
-          tb.primary_key(primary_key)
-          tb
+          ActiveRecord::ConnectionAdapters::TableDefinition.new(connection)
         end
       end
 
@@ -61,8 +60,8 @@ module MiniRecord
       alias :attributes :schema
 
       def add_index(column_name, options={})
-        index_name = connection.index_name(table_name, :column => column_name)
-        indexes[index_name] = options.merge(:column => column_name)
+        index_name = shorten_index_name connection.index_name(table_name, :column => column_name)
+        indexes[index_name] = options.merge(:column => column_name, :name => index_name)
         index_name
       end
       alias :index :add_index
@@ -73,17 +72,71 @@ module MiniRecord
         puts "\e[31m%s\e[0m" % e.message.strip
         false
       end
+      
+      def shorten_index_name(name)
+        if name.length < connection.index_name_length
+          name
+        else
+          name[0..(connection.index_name_length-11)] + ::Zlib.crc32(name).to_s
+        end
+      end
+      
+      def sqlite?
+        connection.adapter_name =~ /sqlite/i
+      end
+      
+      def mysql?
+        connection.adapter_name =~ /mysql/i
+      end
+      
+      def postgresql?
+        connection.adapter_name =~ /postgresql/i
+      end
 
-      def auto_upgrade!
+      def auto_upgrade!(create_table_options = '')
         return unless connection?
+        
+        # normally activerecord's mysql adapter does this
+        if mysql?
+          create_table_options ||= 'ENGINE=InnoDB'
+        end
+
+        non_standard_primary_key = if (primary_key_column = table_definition.columns.detect { |column| column.name.to_s == primary_key.to_s })
+          primary_key_column.type != :primary_key
+        end
+          
+        unless non_standard_primary_key
+          table_definition.column :id, :primary_key
+        end
 
         # Table doesn't exist, create it
-        unless connection.tables.include?(table_name)
-          # TODO: Add to create_table options
-          class << connection; attr_accessor :table_definition; end unless connection.respond_to?(:table_definition=)
-          connection.table_definition = table_definition
-          connection.create_table(table_name)
-          connection.table_definition = ActiveRecord::ConnectionAdapters::TableDefinition.new(connection)
+        unless connection.table_exists? table_name
+          
+          # avoid using connection.create_table because in 3.0.x it ignores table_definition
+          # and it also is too eager about adding a primary key column
+          create_sql = "CREATE TABLE "
+          create_sql << "#{quoted_table_name} ("
+          create_sql << table_definition.to_sql
+          create_sql << ") #{create_table_options}"
+          connection.execute create_sql
+          
+          if non_standard_primary_key
+            if sqlite?
+              add_index primary_key, :unique => true
+            elsif mysql? or postgresql?
+            # can't use add_index method because it won't let you do "PRIMARY KEY"
+              connection.execute "ALTER TABLE #{quoted_table_name} ADD PRIMARY KEY (#{quoted_primary_key})"
+            else
+              raise RuntimeError, "mini_record doesn't support non-standard primary keys for the #{connection.adapter_name} adapter!"
+            end
+          end
+
+          reset_column_information
+        end
+
+        # Add to schema inheritance column if necessary
+        if descendants.present? && !table_definition.columns.any? { |column| column.name.to_s == inheritance_column.to_s }
+          table_definition.column inheritance_column, :string
         end
 
         # Grab database columns
@@ -97,12 +150,6 @@ module MiniRecord
           hash[column.name.to_s] = column
           hash
         end
-
-        # Add to schema inheritance column if necessary
-        if descendants.present? && !fields_in_schema.include?(inheritance_column.to_s)
-          table_definition.column inheritance_column, :string
-        end
-
 
         # Remove fields from db no longer in schema
         (fields_in_db.keys - fields_in_schema.keys & fields_in_db.keys).each do |field|

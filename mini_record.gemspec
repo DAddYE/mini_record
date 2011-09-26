@@ -5,8 +5,8 @@ require "mini_record/version"
 Gem::Specification.new do |s|
   s.name        = "mini_record"
   s.version     = MiniRecord::VERSION
-  s.authors     = ["Davide D'Agostino"]
-  s.email       = ["d.dagostino@lipsiasoft.com"]
+  s.authors     = ["Davide D'Agostino", "Seamus Abshere"]
+  s.email       = ["d.dagostino@lipsiasoft.com", "seamus@abshere.net"]
   s.homepage    = "https://github.com/DAddYE/mini_record"
   s.summary     = %q{MiniRecord is a micro gem that allow you to write schema inside your model as you can do in DataMapper.}
   s.description = %q{
@@ -22,7 +22,7 @@ Gem::Specification.new do |s|
   s.executables   = `git ls-files -- bin/*`.split("\n").map{ |f| File.basename(f) }
   s.require_paths = ["lib"]
 
-  # specify any dependencies here; for example:
-  # s.add_development_dependency "rspec"
-  s.add_dependency "activerecord", "~>3.1.0"
+  s.add_runtime_dependency "activerecord", ">=3"
+
+  # dev dependencies appear to be in the Gemfile
 end
