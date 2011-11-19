@@ -28,6 +28,7 @@ class Person < ActiveRecord::Base
   schema do |s|
     s.string :name
   end
+  timestamps
 end
 
 class Post < ActiveRecord::Base
