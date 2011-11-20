@@ -8,12 +8,16 @@ describe MiniRecord do
     ActiveRecord::Base.connection.table_exists?(Person.table_name).must_equal false
     Person.auto_upgrade!
     Person.table_name.must_equal 'people'
-    Person.db_columns.sort.must_equal %w[id name]
-    Person.column_names.must_equal Person.db_columns
-    Person.column_names.must_equal Person.schema_columns
+    Person.db_columns.sort.must_equal %w[created_at id name updated_at]
+    Person.column_names.sort.must_equal Person.db_columns.sort
+    Person.column_names.sort.must_equal Person.schema_columns.sort
     person = Person.create(:name => 'foo')
     person.name.must_equal 'foo'
     proc { person.surname }.must_raise NoMethodError
+
+    # Test the timestamp columns exist
+    person.must_respond_to :created_at
+    person.must_respond_to :updated_at
 
     # Add a column without lost data
     Person.class_eval do
