@@ -12,7 +12,7 @@ My inspiration come from this handy [project](https://github.com/pjhyett/auto_mi
 
 * Define columns/properties inside your model
 * Perform migrations automatically
-* Auto upgrade your schema, so if you know what you are doing you don't lost your existing data!
+* Auto upgrade your schema, so if you know what you are doing you don't lose your existing data!
 * Add, Remove, Change Columns; Add, Remove, Change indexes
 
 ## Instructions
