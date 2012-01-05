@@ -67,7 +67,7 @@ class Foo < ActiveRecord::Base
 end
 ```
 
-See [ActiveRecord::TableDefinition](http://api.rubyonrails.org/classes/ActiveRecord/ConnectionAdapters/TableDefinition.html) 
+See [ActiveRecord::TableDefinition](http://api.rubyonrails.org/classes/ActiveRecord/ConnectionAdapters/TableDefinition.html)
 for more details.
 
 Finally, when you execute `MyModel.auto_upgrade!`, missing columns, indexes and tables will be created on the fly.
@@ -76,6 +76,34 @@ Indexes and columns present in the db but **not** in your model schema will be *
 ### Single Table Inheritance
 
 MiniRecord as ActiveRecord support STI plus some goodness, see our specs for more details.
+
+### ActiveRecord Relations
+
+MiniRecord has built-in support of belongs_to, belongs_to polymorphic and habtm relations. Just declaring these in your model will generate the necessary id columns, indexes and join tables
+
+#### belongs_to
+```ruby
+class Address < ActiveRecord::Base
+  belongs_to :person
+end
+```
+Will result in a person_id column (you can override with the `foreign_key` option) which is indexed
+
+#### belongs_to (polymorphic)
+```ruby
+class Address < ActiveRecord::Base
+  belongs_to :addressable, :polymorphic => true
+end
+```
+Will result in addressable id and type columns with composite indexes `add_index(:addresses), [:addressable_id, :addressable_type]`
+
+#### habtm
+```ruby
+class Address < ActiveRecord::Base
+  has_and_belongs_to_many :people
+end
+```
+Will generate a "addresses_people" join table and index the id columns
 
 ### Adding a new column
 

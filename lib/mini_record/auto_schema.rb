@@ -110,12 +110,15 @@ module MiniRecord
         # Generate fields from associations
         if reflect_on_all_associations.any?
           reflect_on_all_associations.each do |association|
-            id_key   = "#{association.name.to_s}_id".to_sym
+            id_key = if association.options[:foreign_key]
+              association.options[:foreign_key]
+            else
+              "#{association.name.to_s}_id".to_sym
+            end
             type_key = "#{association.name.to_s}_type".to_sym
             case association.macro
             when :belongs_to
               unless fields_in_schema.include?(id_key.to_s)
-                table_definition.column id_key, :integer
                 connection.add_column table_name, id_key, :integer
                 if association.options[:polymorphic]
                   connection.add_column table_name, type_key, :string
