@@ -180,4 +180,55 @@ describe MiniRecord do
     fake.category_id.must_equal 1
     fake.group_id.must_equal 2
   end
+
+  it 'creates a column and index based on belongs_to relation' do
+    class Publisher < ActiveRecord::Base
+      has_many :articles
+      col :name
+    end
+    class Article < ActiveRecord::Base
+      key :title
+      belongs_to :publisher
+    end
+    Publisher.auto_upgrade!
+    Article.auto_upgrade!
+    Article.create(:title => 'Hello', :publisher_id => 1)
+    Article.first.tap do |a|
+      a.title.must_equal 'Hello'
+      a.publisher_id.must_equal 1
+    end
+    Article.connection.indexes(:articles).map(&:name).must_include 'index_articles_on_publisher_id'
+  end
+
+  it 'creates columns and index based on belongs_to polymorphic relation' do
+    class Attachment < ActiveRecord::Base
+      key :name
+      belongs_to :attachable, :polymorphic => true
+    end
+    Attachment.auto_upgrade!
+    Attachment.create(:name => 'Avatar', :attachable_id => 1, :attachable_type => 'Post')
+    Attachment.first.tap do |attachment|
+      attachment.name.must_equal 'Avatar'
+      attachment.attachable_id.must_equal 1
+      attachment.attachable_type.must_equal 'Post'
+    end
+    index = "index_attachments_on_attachable_id_and_attachable_type"
+    Attachment.connection.indexes(:attachments).map(&:name).must_include index
+  end
+
+  it 'creates a join table with indexes for has_and_belongs_to_many relations' do
+    class Tool < ActiveRecord::Base
+      has_and_belongs_to_many :purposes
+    end
+    class Purpose < ActiveRecord::Base
+      has_and_belongs_to_many :tools
+    end
+    Tool.auto_upgrade!
+    Purpose.auto_upgrade!
+    tables = Tool.connection.tables
+    tables.must_include('tools_purposes')
+    index = "index_tools_purposes_on_tools_purpose_id_and_purpose_id"
+    Tool.connection.indexes('tools_purposes').map(&:name).must_include index
+  end
+
 end

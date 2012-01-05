@@ -46,7 +46,7 @@ module MiniRecord
       alias :attribute :col
 
       def timestamps
-        col :created_at, :updated_at, :as => :datetime 
+        col :created_at, :updated_at, :as => :datetime
       end
 
       def reset_table_definition!
@@ -107,6 +107,36 @@ module MiniRecord
           table_definition.column inheritance_column, :string
         end
 
+        # Generate fields from associations
+        if reflect_on_all_associations.any?
+          reflect_on_all_associations.each do |association|
+            id_key   = "#{association.name.to_s}_id".to_sym
+            type_key = "#{association.name.to_s}_type".to_sym
+            case association.macro
+            when :belongs_to
+              unless fields_in_schema.include?(id_key.to_s)
+                table_definition.column id_key, :integer
+                connection.add_column table_name, id_key, :integer
+                if association.options[:polymorphic]
+                  connection.add_column table_name, type_key, :string
+                  add_index [id_key, type_key]
+                else
+                  add_index id_key
+                end
+              end
+            when :has_and_belongs_to_many
+              table1 = "#{table_name}_#{association.name}"
+              table2 = "#{association.name}_#{table_name}"
+              index = ""
+              unless connection.tables.include?(table1) || connection.tables.include?(table2)
+                connection.create_table(table1)
+                connection.add_column table1, "#{table1.singularize}_id", :integer
+                connection.add_column table1, "#{association.name.to_s.singularize}_id", :integer
+                connection.add_index table1.to_sym, ["#{table1.singularize}_id".to_sym, "#{association.name.to_s.singularize}_id".to_sym], association.options
+              end
+            end
+          end
+        end
 
         # Remove fields from db no longer in schema
         (fields_in_db.keys - fields_in_schema.keys & fields_in_db.keys).each do |field|

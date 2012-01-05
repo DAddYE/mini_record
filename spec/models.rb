@@ -33,18 +33,20 @@ end
 
 class Post < ActiveRecord::Base
   include SpecHelper
-
   key :title
   key :body
   key :category, :as => :references
   belongs_to :category
 end
 
+
+
 class Category < ActiveRecord::Base
   include SpecHelper
-
   key :title
+  has_many :articles
   has_many :posts
+  has_many :items
 end
 
 class Animal < ActiveRecord::Base
