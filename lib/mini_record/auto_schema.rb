@@ -118,7 +118,7 @@ module MiniRecord
             type_key = "#{association.name.to_s}_type".to_sym
             case association.macro
             when :belongs_to
-              unless fields_in_schema.include?(id_key.to_s)
+              unless fields_in_db.include?(id_key.to_s)
                 connection.add_column table_name, id_key, :integer
                 if association.options[:polymorphic]
                   connection.add_column table_name, type_key, :string
