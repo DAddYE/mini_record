@@ -68,3 +68,21 @@ class Purpose < ActiveRecord::Base
   include SpecHelper
   has_and_belongs_to_many :tools
 end
+
+class Publisher < ActiveRecord::Base
+  include SpecHelper
+  has_many :articles
+  col :name
+end
+
+class Article < ActiveRecord::Base
+  include SpecHelper
+  key :title
+  belongs_to :publisher
+end
+
+class Attachment < ActiveRecord::Base
+  include SpecHelper
+  key :name
+  belongs_to :attachable, :polymorphic => true
+end

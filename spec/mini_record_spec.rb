@@ -182,14 +182,6 @@ describe MiniRecord do
   end
 
   it 'creates a column and index based on belongs_to relation' do
-    class Publisher < ActiveRecord::Base
-      has_many :articles
-      col :name
-    end
-    class Article < ActiveRecord::Base
-      key :title
-      belongs_to :publisher
-    end
     Publisher.auto_upgrade!
     Article.auto_upgrade!
     Article.create(:title => 'Hello', :publisher_id => 1)
@@ -204,11 +196,19 @@ describe MiniRecord do
     Article.connection.indexes(:articles).map(&:name).must_include 'index_articles_on_publisher_id'
   end
 
-  it 'creates columns and index based on belongs_to polymorphic relation' do
+  it 'removes a column and index when belongs_to relation is removed' do
+    Attachment.auto_upgrade!
     class Attachment < ActiveRecord::Base
       key :name
-      belongs_to :attachable, :polymorphic => true
     end
+    Attachment.auto_upgrade!
+    !Attachment.connection.columns(:attachments).map(&:name).must_include 'attachable_id'
+    !Attachment.connection.columns(:attachments).map(&:name).must_include 'attachable_type'
+    index = "index_attachments_on_attachable_id_and_attachable_type"
+    !Attachment.connection.indexes(:attachments).map(&:name).must_include index
+  end
+
+  it 'creates columns and index based on belongs_to polymorphic relation' do
     Attachment.auto_upgrade!
     Attachment.create(:name => 'Avatar', :attachable_id => 1, :attachable_type => 'Post')
     Attachment.first.tap do |attachment|

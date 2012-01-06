@@ -143,8 +143,23 @@ module MiniRecord
           table_definition.column inheritance_column, :string
         end
 
+        # Protect foreign keys if association exists
+        foreign_key_fields = reflect_on_all_associations.inject([]) do |result, association|
+          if association.macro == :belongs_to
+            if association.options[:polymorphic]
+              result << "#{association.name.to_s}_type"
+            end
+            if association.options[:foreign_key]
+              result << association.options[:foreign_key].to_s
+            else
+              result << "#{association.name.to_s}_id"
+            end
+          end
+          result
+        end
+
         # Remove fields from db no longer in schema
-        (fields_in_db.keys - fields_in_schema.keys & fields_in_db.keys).each do |field|
+        ((fields_in_db.keys - foreign_key_fields) - fields_in_schema.keys & fields_in_db.keys).each do |field|
           column = fields_in_db[field]
           connection.remove_column table_name, column.name
         end
