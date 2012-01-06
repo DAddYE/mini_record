@@ -198,6 +198,10 @@ describe MiniRecord do
       a.publisher_id.must_equal 1
     end
     Article.connection.indexes(:articles).map(&:name).must_include 'index_articles_on_publisher_id'
+    # Ensure that associated field/index is not deleted on upgrade
+    Article.auto_upgrade!
+    Article.first.publisher_id.must_equal 1
+    Article.connection.indexes(:articles).map(&:name).must_include 'index_articles_on_publisher_id'
   end
 
   it 'creates columns and index based on belongs_to polymorphic relation' do
@@ -214,21 +218,37 @@ describe MiniRecord do
     end
     index = "index_attachments_on_attachable_id_and_attachable_type"
     Attachment.connection.indexes(:attachments).map(&:name).must_include index
+    # Ensure that associated fields/indexes are not deleted on subsequent upgrade
+    Attachment.auto_upgrade!
+    Attachment.first.attachable_id.must_equal 1
+    Attachment.first.attachable_type.must_equal 'Post'
+    Attachment.connection.indexes(:attachments).map(&:name).must_include index
   end
 
   it 'creates a join table with indexes for has_and_belongs_to_many relations' do
-    class Tool < ActiveRecord::Base
-      has_and_belongs_to_many :purposes
-    end
-    class Purpose < ActiveRecord::Base
-      has_and_belongs_to_many :tools
-    end
     Tool.auto_upgrade!
     Purpose.auto_upgrade!
     tables = Tool.connection.tables
     tables.must_include('tools_purposes')
     index = "index_tools_purposes_on_tools_purpose_id_and_purpose_id"
     Tool.connection.indexes('tools_purposes').map(&:name).must_include index
+    # Ensure that join table is not deleted on subsequent upgrade
+    Tool.auto_upgrade!
+    tables.must_include('tools_purposes')
+    Tool.connection.indexes('tools_purposes').map(&:name).must_include index
+  end
+
+  it 'drops join table if has_and_belongs_to_many relation is deleted' do
+    Tool.auto_upgrade!
+    Purpose.auto_upgrade!
+    Tool.connection.tables.must_include('tools_purposes')
+    class Tool < ActiveRecord::Base
+    end
+    class Purpose < ActiveRecord::Base
+    end
+    Tool.auto_upgrade!
+    Purpose.auto_upgrade!
+    !Tool.connection.tables.must_include('tools_purposes')
   end
 
 end

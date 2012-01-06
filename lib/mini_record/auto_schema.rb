@@ -96,17 +96,6 @@ module MiniRecord
           hash
         end
 
-        # Grab new schema
-        fields_in_schema = table_definition.columns.inject({}) do |hash, column|
-          hash[column.name.to_s] = column
-          hash
-        end
-
-        # Add to schema inheritance column if necessary
-        if descendants.present? && !fields_in_schema.include?(inheritance_column.to_s)
-          table_definition.column inheritance_column, :string
-        end
-
         # Generate fields from associations
         if reflect_on_all_associations.any?
           reflect_on_all_associations.each do |association|
@@ -119,9 +108,11 @@ module MiniRecord
             case association.macro
             when :belongs_to
               unless fields_in_db.include?(id_key.to_s)
-                connection.add_column table_name, id_key, :integer
+                table_definition.send(:integer, id_key)
+                # connection.add_column table_name, id_key, :integer
                 if association.options[:polymorphic]
-                  connection.add_column table_name, type_key, :string
+                  table_definition.send(:string, type_key)
+                  # connection.add_column table_name, type_key, :string
                   add_index [id_key, type_key]
                 else
                   add_index id_key
@@ -141,10 +132,30 @@ module MiniRecord
           end
         end
 
+        # Grab new schema
+        fields_in_schema = table_definition.columns.inject({}) do |hash, column|
+          hash[column.name.to_s] = column
+          hash
+        end
+
+        # Add to schema inheritance column if necessary
+        if descendants.present? && !fields_in_schema.include?(inheritance_column.to_s)
+          table_definition.column inheritance_column, :string
+        end
+
         # Remove fields from db no longer in schema
         (fields_in_db.keys - fields_in_schema.keys & fields_in_db.keys).each do |field|
           column = fields_in_db[field]
           connection.remove_column table_name, column.name
+        end
+
+        # Remove join tables for deleted has_and_belongs_to_many association
+        no_habtm = !reflect_on_all_associations.map(&:macro).include?(:has_and_belongs_to_many)
+        habtm_table1 = connection.tables.include?("_#{table_name}")
+        habtm_table2 = connection.tables.include?("#{table_name}_")
+        if no_habtm && (habtm_table1 || habtm_table2)
+          habtm = habtm_table1 ? habtm_table1 : habtm_table2
+          connection.drop_table habtm
         end
 
         # Add fields to db new to schema

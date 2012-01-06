@@ -39,8 +39,6 @@ class Post < ActiveRecord::Base
   belongs_to :category
 end
 
-
-
 class Category < ActiveRecord::Base
   include SpecHelper
   key :title
@@ -51,13 +49,22 @@ end
 
 class Animal < ActiveRecord::Base
   include SpecHelper
-
   key :name, :index => true
   index :id
 end
 
 class Pet < ActiveRecord::Base
   include SpecHelper
-
   key :name, :index => true
+end
+
+class Tool < ActiveRecord::Base
+  include SpecHelper
+
+  has_and_belongs_to_many :purposes
+end
+
+class Purpose < ActiveRecord::Base
+  include SpecHelper
+  has_and_belongs_to_many :tools
 end
