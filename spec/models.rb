@@ -86,3 +86,13 @@ class Attachment < ActiveRecord::Base
   key :name
   belongs_to :attachable, :polymorphic => true
 end
+
+class Account < ActiveRecord::Base
+  include SpecHelper
+  key :name
+end
+
+class Task < ActiveRecord::Base
+  include SpecHelper
+  belongs_to :author, :class_name => 'Account'
+end

@@ -109,10 +109,8 @@ module MiniRecord
             when :belongs_to
               unless fields_in_db.include?(id_key.to_s)
                 table_definition.send(:integer, id_key)
-                # connection.add_column table_name, id_key, :integer
                 if association.options[:polymorphic]
                   table_definition.send(:string, type_key)
-                  # connection.add_column table_name, type_key, :string
                   add_index [id_key, type_key]
                 else
                   add_index id_key
