@@ -1,7 +1,12 @@
 require File.expand_path('../spec_helper.rb', __FILE__)
-require File.expand_path('../models.rb', __FILE__)
 
 describe MiniRecord do
+
+  before do
+    ActiveRecord::Base.descendants.each { |klass| Object.send(:remove_const, klass.to_s) }
+    ActiveSupport::DescendantsTracker.direct_descendants(ActiveRecord::Base).clear
+    load File.expand_path('../models.rb', __FILE__)
+  end
 
   it 'has #schema inside model' do
     # For unknown reason separate specs doesn't works
@@ -206,8 +211,10 @@ describe MiniRecord do
     Foo.db_columns.must_include 'image_type'
     Foo.db_columns.must_include 'image_id'
     Foo.db_indexes.must_include 'index_foos_on_image_id_and_image_type'
-    Object.send(:remove_const, :Foo)
-    class Foo < ActiveRecord::Base
+    Foo.class_eval do
+      reset_table_definition!
+      reflections.clear
+      indexes.clear
       key :name
     end
     Foo.auto_upgrade!
@@ -225,7 +232,7 @@ describe MiniRecord do
       attachment.attachable_id.must_equal 1
       attachment.attachable_type.must_equal 'Post'
     end
-    index = "index_attachments_on_attachable_id_and_attachable_type"
+    index = 'index_attachments_on_attachable_id_and_attachable_type'
     Attachment.db_indexes.must_include index
     # Ensure that associated fields/indexes are not deleted on subsequent upgrade
     Attachment.auto_upgrade!
@@ -238,13 +245,13 @@ describe MiniRecord do
     Tool.auto_upgrade!
     Purpose.auto_upgrade!
     tables = Tool.connection.tables
-    tables.must_include('tools_purposes')
-    index = "index_tools_purposes_on_tools_purpose_id_and_purpose_id"
-    Tool.connection.indexes('tools_purposes').map(&:name).must_include index
+    tables.must_include('purposes_tools')
+    index = 'index_purposes_tools_on_purpose_id_and_purposes_tool_id'
+    Tool.connection.indexes('purposes_tools').map(&:name).must_include index
     # Ensure that join table is not deleted on subsequent upgrade
     Tool.auto_upgrade!
-    tables.must_include('tools_purposes')
-    Tool.connection.indexes('tools_purposes').map(&:name).must_include index
+    tables.must_include('purposes_tools')
+    Tool.connection.indexes('purposes_tools').map(&:name).must_include index
   end
 
   it 'drops join table if has_and_belongs_to_many relation is deleted' do
@@ -256,7 +263,18 @@ describe MiniRecord do
     class Purpose < ActiveRecord::Base; end
     Tool.auto_upgrade!
     Purpose.auto_upgrade!
-    Tool.connection.tables.wont_include('tools_purposes')
+    Tool.connection.tables.wont_include('purposes_tools')
   end
 
+  it 'should support #belongs_to with :class_name' do
+    Task.auto_upgrade!
+    Task.schema_columns.must_include 'author_id'
+    Task.db_columns.must_include 'author_id'
+  end
+
+  it 'should support #belongs_to with :foreign_key' do
+    Activity.auto_upgrade!
+    Activity.schema_columns.must_include 'custom_id'
+    Activity.db_columns.must_include 'custom_id'
+  end
 end

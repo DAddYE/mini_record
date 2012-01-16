@@ -16,6 +16,10 @@ module SpecHelper
     def schema_columns
       table_definition.columns.map { |c| c.name.to_s }.sort
     end
+
+    def reset!
+      reset
+    end
   end
 end
 

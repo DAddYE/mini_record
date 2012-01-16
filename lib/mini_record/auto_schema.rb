@@ -117,14 +117,13 @@ module MiniRecord
                 end
               end
             when :has_and_belongs_to_many
-              table1 = "#{table_name}_#{association.name}"
-              table2 = "#{association.name}_#{table_name}"
+              table = [table_name, association.name.to_s].sort.join("_")
               index = ""
-              unless connection.tables.include?(table1) || connection.tables.include?(table2)
-                connection.create_table(table1)
-                connection.add_column table1, "#{table1.singularize}_id", :integer
-                connection.add_column table1, "#{association.name.to_s.singularize}_id", :integer
-                connection.add_index table1.to_sym, ["#{table1.singularize}_id".to_sym, "#{association.name.to_s.singularize}_id".to_sym], association.options
+              unless connection.tables.include?(table)
+                connection.create_table(table)
+                connection.add_column table, "#{table.singularize}_id", :integer
+                connection.add_column table, "#{association.name.to_s.singularize}_id", :integer
+                connection.add_index table.to_sym, ["#{table.singularize}_id", "#{association.name.to_s.singularize}_id"].sort.map(&:to_sym), association.options
               end
             end
           end

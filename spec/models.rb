@@ -63,3 +63,7 @@ end
 class Task < ActiveRecord::Base
   belongs_to :author, :class_name => 'Account'
 end
+
+class Activity < ActiveRecord::Base
+  belongs_to :author, :class_name => 'Account', :foreign_key => 'custom_id'
+end
