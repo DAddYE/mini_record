@@ -197,16 +197,24 @@ describe MiniRecord do
   end
 
   it 'removes a column and index when belongs_to relation is removed' do
-    skip
-    Attachment.auto_upgrade!
-    class Attachment < ActiveRecord::Base
+    class Foo < ActiveRecord::Base
+      key :name
+      belongs_to :image, :polymorphic => true
+    end
+    Foo.auto_upgrade!
+    Foo.db_columns.must_include 'name'
+    Foo.db_columns.must_include 'image_type'
+    Foo.db_columns.must_include 'image_id'
+    Foo.db_indexes.must_include 'index_foos_on_image_id_and_image_type'
+    Object.send(:remove_const, :Foo)
+    class Foo < ActiveRecord::Base
       key :name
     end
-    Attachment.auto_upgrade!
-    Attachment.db_columns.wont_include 'attachable_id'
-    Attachment.db_columns.wont_include 'attachable_type'
-    index = "index_attachments_on_attachable_id_and_attachable_type"
-    Attachment.db_indexes.wont_include index
+    Foo.auto_upgrade!
+    Foo.db_columns.must_include 'name'
+    Foo.db_columns.wont_include 'image_type'
+    Foo.db_columns.wont_include 'image_id'
+    Foo.db_indexes.must_be_empty
   end
 
   it 'creates columns and index based on belongs_to polymorphic relation' do
