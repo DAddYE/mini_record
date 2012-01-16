@@ -6,12 +6,10 @@ describe MiniRecord do
     ActiveRecord::Base.descendants.each { |klass| Object.send(:remove_const, klass.to_s) }
     ActiveSupport::DescendantsTracker.direct_descendants(ActiveRecord::Base).clear
     load File.expand_path('../models.rb', __FILE__)
+    ActiveRecord::Base.auto_upgrade!
   end
 
   it 'has #schema inside model' do
-    # For unknown reason separate specs doesn't works
-    ActiveRecord::Base.connection.table_exists?(Person.table_name).must_equal false
-    Person.auto_upgrade!
     Person.table_name.must_equal 'people'
     Person.db_columns.sort.must_equal %w[created_at id name updated_at]
     Person.column_names.sort.must_equal Person.db_columns.sort
@@ -65,9 +63,6 @@ describe MiniRecord do
   end
 
   it 'has #key,col,property,attribute inside model' do
-    ActiveRecord::Base.connection.table_exists?(Post.table_name).must_equal false
-    ActiveRecord::Base.connection.table_exists?(Category.table_name).must_equal false
-    Post.auto_upgrade!; Category.auto_upgrade!
     Post.column_names.sort.must_equal Post.db_columns
     Category.column_names.sort.must_equal Category.schema_columns
 
@@ -95,7 +90,6 @@ describe MiniRecord do
 
   it 'has indexes inside model' do
     # Check indexes
-    Animal.auto_upgrade!
     Animal.db_indexes.size.must_be :>, 0
     Animal.db_indexes.must_equal Animal.indexes.keys.sort
 
@@ -119,11 +113,9 @@ describe MiniRecord do
   it 'works with STI' do
     class Dog < Pet; end
     class Cat < Pet; end
-    Pet.auto_upgrade!
+    ActiveRecord::Base.auto_upgrade!
 
     # Check inheritance column
-    Pet.db_columns.wont_include "type"
-    Dog.auto_upgrade!
     Pet.db_columns.must_include "type"
 
     # Now, let's we know if STI is working
@@ -135,7 +127,6 @@ describe MiniRecord do
     Pet.all.map(&:name).must_equal ["foo", "bar"]
 
     # Check that this doesn't break things
-    Cat.auto_upgrade!
     Dog.first.name.must_equal "bar"
 
     # What's happen if we change schema?
@@ -187,8 +178,6 @@ describe MiniRecord do
   end
 
   it 'creates a column and index based on belongs_to relation' do
-    Publisher.auto_upgrade!
-    Article.auto_upgrade!
     Article.create(:title => 'Hello', :publisher_id => 1)
     Article.first.tap do |a|
       a.title.must_equal 'Hello'
@@ -225,7 +214,6 @@ describe MiniRecord do
   end
 
   it 'creates columns and index based on belongs_to polymorphic relation' do
-    Attachment.auto_upgrade!
     Attachment.create(:name => 'Avatar', :attachable_id => 1, :attachable_type => 'Post')
     Attachment.first.tap do |attachment|
       attachment.name.must_equal 'Avatar'
@@ -242,8 +230,6 @@ describe MiniRecord do
   end
 
   it 'creates a join table with indexes for has_and_belongs_to_many relations' do
-    Tool.auto_upgrade!
-    Purpose.auto_upgrade!
     tables = Tool.connection.tables
     tables.must_include('purposes_tools')
     index = 'index_purposes_tools_on_purpose_id_and_purposes_tool_id'
@@ -255,25 +241,18 @@ describe MiniRecord do
   end
 
   it 'drops join table if has_and_belongs_to_many relation is deleted' do
-    skip
-    Tool.auto_upgrade!
-    Purpose.auto_upgrade!
-    Tool.connection.tables.must_include('tools_purposes')
-    class Tool < ActiveRecord::Base; end
-    class Purpose < ActiveRecord::Base; end
-    Tool.auto_upgrade!
-    Purpose.auto_upgrade!
+    Tool.schema_tables.delete('purposes_tools')
+    ActiveRecord::Base.schema_tables.wont_include('purposes_tools')
+    ActiveRecord::Base.clear_tables!
     Tool.connection.tables.wont_include('purposes_tools')
   end
 
   it 'should support #belongs_to with :class_name' do
-    Task.auto_upgrade!
     Task.schema_columns.must_include 'author_id'
     Task.db_columns.must_include 'author_id'
   end
 
   it 'should support #belongs_to with :foreign_key' do
-    Activity.auto_upgrade!
     Activity.schema_columns.must_include 'custom_id'
     Activity.db_columns.must_include 'custom_id'
   end
