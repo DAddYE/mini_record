@@ -33,7 +33,6 @@ end
 
 class Post < ActiveRecord::Base
   include SpecHelper
-
   key :title
   key :body
   key :category, :as => :references
@@ -42,20 +41,48 @@ end
 
 class Category < ActiveRecord::Base
   include SpecHelper
-
   key :title
+  has_many :articles
   has_many :posts
+  has_many :items
 end
 
 class Animal < ActiveRecord::Base
   include SpecHelper
-
   key :name, :index => true
   index :id
 end
 
 class Pet < ActiveRecord::Base
   include SpecHelper
-
   key :name, :index => true
+end
+
+class Tool < ActiveRecord::Base
+  include SpecHelper
+
+  has_and_belongs_to_many :purposes
+end
+
+class Purpose < ActiveRecord::Base
+  include SpecHelper
+  has_and_belongs_to_many :tools
+end
+
+class Publisher < ActiveRecord::Base
+  include SpecHelper
+  has_many :articles
+  col :name
+end
+
+class Article < ActiveRecord::Base
+  include SpecHelper
+  key :title
+  belongs_to :publisher
+end
+
+class Attachment < ActiveRecord::Base
+  include SpecHelper
+  key :name
+  belongs_to :attachable, :polymorphic => true
 end

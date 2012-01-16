@@ -46,7 +46,7 @@ module MiniRecord
       alias :attribute :col
 
       def timestamps
-        col :created_at, :updated_at, :as => :datetime 
+        col :created_at, :updated_at, :as => :datetime
       end
 
       def reset_table_definition!
@@ -96,6 +96,42 @@ module MiniRecord
           hash
         end
 
+        # Generate fields from associations
+        if reflect_on_all_associations.any?
+          reflect_on_all_associations.each do |association|
+            id_key = if association.options[:foreign_key]
+              association.options[:foreign_key]
+            else
+              "#{association.name.to_s}_id".to_sym
+            end
+            type_key = "#{association.name.to_s}_type".to_sym
+            case association.macro
+            when :belongs_to
+              unless fields_in_db.include?(id_key.to_s)
+                table_definition.send(:integer, id_key)
+                # connection.add_column table_name, id_key, :integer
+                if association.options[:polymorphic]
+                  table_definition.send(:string, type_key)
+                  # connection.add_column table_name, type_key, :string
+                  add_index [id_key, type_key]
+                else
+                  add_index id_key
+                end
+              end
+            when :has_and_belongs_to_many
+              table1 = "#{table_name}_#{association.name}"
+              table2 = "#{association.name}_#{table_name}"
+              index = ""
+              unless connection.tables.include?(table1) || connection.tables.include?(table2)
+                connection.create_table(table1)
+                connection.add_column table1, "#{table1.singularize}_id", :integer
+                connection.add_column table1, "#{association.name.to_s.singularize}_id", :integer
+                connection.add_index table1.to_sym, ["#{table1.singularize}_id".to_sym, "#{association.name.to_s.singularize}_id".to_sym], association.options
+              end
+            end
+          end
+        end
+
         # Grab new schema
         fields_in_schema = table_definition.columns.inject({}) do |hash, column|
           hash[column.name.to_s] = column
@@ -107,11 +143,34 @@ module MiniRecord
           table_definition.column inheritance_column, :string
         end
 
+        # Protect foreign keys if association exists
+        foreign_key_fields = reflect_on_all_associations.inject([]) do |result, association|
+          if association.macro == :belongs_to
+            if association.options[:polymorphic]
+              result << "#{association.name.to_s}_type"
+            end
+            if association.options[:foreign_key]
+              result << association.options[:foreign_key].to_s
+            else
+              result << "#{association.name.to_s}_id"
+            end
+          end
+          result
+        end
 
         # Remove fields from db no longer in schema
-        (fields_in_db.keys - fields_in_schema.keys & fields_in_db.keys).each do |field|
+        ((fields_in_db.keys - foreign_key_fields) - fields_in_schema.keys & fields_in_db.keys).each do |field|
           column = fields_in_db[field]
           connection.remove_column table_name, column.name
+        end
+
+        # Remove join tables for deleted has_and_belongs_to_many association
+        no_habtm = !reflect_on_all_associations.map(&:macro).include?(:has_and_belongs_to_many)
+        habtm_table1 = connection.tables.include?("_#{table_name}")
+        habtm_table2 = connection.tables.include?("#{table_name}_")
+        if no_habtm && (habtm_table1 || habtm_table2)
+          habtm = habtm_table1 ? habtm_table1 : habtm_table2
+          connection.drop_table habtm
         end
 
         # Add fields to db new to schema
