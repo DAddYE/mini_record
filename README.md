@@ -52,7 +52,7 @@ Option `:as` or `:type` if not provided is `:string` by default, you can use all
 
 ``` rb
 :primary_key, :string, :text, :integer, :float, :decimal, :datetime, :timestamp, :time, :date, :binary, :boolean
-:references, :belongs_to, :polymorphic, :timestamp
+:references, :belongs_to, :timestamp
 ```
 
 You can provide others ActiveRecord options like:
