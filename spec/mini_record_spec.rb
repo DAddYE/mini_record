@@ -256,4 +256,23 @@ describe MiniRecord do
     Activity.schema_columns.must_include 'custom_id'
     Activity.db_columns.must_include 'custom_id'
   end
+
+  it 'should memonize in schema relationships' do
+    conn = ActiveRecord::Base.connection
+    conn.create_table('foos')
+    conn.add_column :foos, :name, :string
+    conn.add_column :foos, :bar_id, :integer
+    conn.add_index  :foos, :bar_id
+    class Foo < ActiveRecord::Base
+      col :name
+      belongs_to :bar
+    end
+    Foo.db_columns.must_include 'name'
+    Foo.db_columns.must_include 'bar_id'
+    Foo.db_indexes.must_include 'index_foos_on_bar_id'
+    Foo.auto_upgrade!
+    Foo.schema_columns.must_include 'name'
+    Foo.schema_columns.must_include 'bar_id'
+    Foo.indexes.must_include 'index_foos_on_bar_id'
+  end
 end

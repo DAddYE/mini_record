@@ -126,14 +126,12 @@ module MiniRecord
               type_key = "#{association.name.to_s}_type".to_sym
               case association.macro
               when :belongs_to
-                unless fields_in_db.include?(id_key.to_s)
-                  table_definition.send(:integer, id_key)
-                  if association.options[:polymorphic]
-                    table_definition.send(:string, type_key)
-                    add_index [id_key, type_key]
-                  else
-                    add_index id_key
-                  end
+                table_definition.send(:integer, id_key)
+                if association.options[:polymorphic]
+                  table_definition.send(:string, type_key)
+                  add_index [id_key, type_key]
+                else
+                  add_index id_key
                 end
               when :has_and_belongs_to_many
                 table = [table_name, association.name.to_s].sort.join("_")
