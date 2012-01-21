@@ -118,29 +118,32 @@ module MiniRecord
           # Generate fields from associations
           if reflect_on_all_associations.any?
             reflect_on_all_associations.each do |association|
-              id_key = if association.options[:foreign_key]
-                association.options[:foreign_key]
-              else
-                "#{association.name.to_s}_id".to_sym
-              end
-              type_key = "#{association.name.to_s}_type".to_sym
+              foreign_key = association.options[:foreign_key] || "#{association.name.to_s}_id"
+              type_key    = "#{association.name.to_s}_type"
               case association.macro
               when :belongs_to
-                table_definition.send(:integer, id_key)
+                table_definition.column(foreign_key, :integer)
                 if association.options[:polymorphic]
-                  table_definition.send(:string, type_key)
-                  add_index [id_key, type_key]
+                  table_definition.column(type_key, :string)
+                  add_index [foreign_key, type_key]
                 else
-                  add_index id_key
+                  add_index foreign_key
                 end
               when :has_and_belongs_to_many
-                table = [table_name, association.name.to_s].sort.join("_")
+                table = if name = association.options[:join_table]
+                          name.to_s
+                        else
+                          [table_name, association.name.to_s].sort.join("_")
+                        end
                 index = ""
-                unless connection.tables.include?(table)
-                  connection.create_table(table)
-                  connection.add_column table, "#{table.singularize}_id", :integer
-                  connection.add_column table, "#{association.name.to_s.singularize}_id", :integer
-                  connection.add_index table.to_sym, ["#{table.singularize}_id", "#{association.name.to_s.singularize}_id"].sort.map(&:to_sym), association.options
+                unless connection.tables.include?(table.to_s)
+                  foreign_key             = association.options[:foreign_key] || "#{table.singularize}_id"
+                  association_foreign_key = association.options[:association_foreign_key] || "#{association.name.to_s.singularize}_id"
+                  connection.create_table(table, :id => false) do |t|
+                    t.integer foreign_key
+                    t.integer association_foreign_key
+                  end
+                  connection.add_index table.to_sym, [foreign_key, association_foreign_key].map(&:to_sym), association.options
                 end
                 # Add join table to our schema tables
                 schema_tables << table unless schema_tables.include?(table)

@@ -237,7 +237,7 @@ describe MiniRecord do
   it 'creates a join table with indexes for has_and_belongs_to_many relations' do
     tables = Tool.connection.tables
     tables.must_include('purposes_tools')
-    index = 'index_purposes_tools_on_purpose_id_and_purposes_tool_id'
+    index = 'index_purposes_tools_on_purposes_tool_id_and_purpose_id'
     Tool.connection.indexes('purposes_tools').map(&:name).must_include index
     # Ensure that join table is not deleted on subsequent upgrade
     Tool.auto_upgrade!
@@ -250,6 +250,19 @@ describe MiniRecord do
     ActiveRecord::Base.schema_tables.wont_include('purposes_tools')
     ActiveRecord::Base.clear_tables!
     Tool.connection.tables.wont_include('purposes_tools')
+  end
+
+  it 'has_and_belongs_to_many with custom join_table and foreign keys' do
+    class Foo < ActiveRecord::Base
+      has_and_belongs_to_many :watchers, :join_table => :watchers, :foreign_key => :custom_foo_id, :association_foreign_key => :customer_id
+    end
+    Foo.auto_upgrade!
+    conn = ActiveRecord::Base.connection
+    conn.tables.must_include 'watchers'
+    cols = conn.columns('watchers').map(&:name)
+    cols.wont_include 'id'
+    cols.must_include 'custom_foo_id'
+    cols.must_include 'customer_id'
   end
 
   it 'should support #belongs_to with :class_name' do
