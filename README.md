@@ -165,11 +165,6 @@ class Fox < ActiveRecord::Base
 end
 ```
 
-## Warnings
-
-This software is not super well tested in a production project.
-Im stated to using it in two customer's projects without any problem.
-
 ## Author
 
 DAddYE, you can follow me on twitter [@daddye](http://twitter.com/daddye) or take a look at my site [daddye.it](http://www.daddye.it)
