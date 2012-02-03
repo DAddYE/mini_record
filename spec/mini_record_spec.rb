@@ -307,6 +307,15 @@ describe MiniRecord do
     article.update_attribute(:body, 'null')
     article.body.must_equal 'null'
     # Finally check the index existance
-    Article.indexes.must_include 'index_articles_on_publisher_id'
+    Article.db_indexes.must_include 'index_articles_on_publisher_id'
+  end
+
+  it 'should add multiple index' do
+    class Foo < ActiveRecord::Base
+      key :name, :surname, :index => true
+    end
+    Foo.auto_upgrade!
+    Foo.db_indexes.must_include 'index_foos_on_name'
+    Foo.db_indexes.must_include 'index_foos_on_surname'
   end
 end
