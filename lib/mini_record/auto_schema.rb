@@ -37,11 +37,11 @@ module MiniRecord
           column_name = table_definition.columns[-1].name
           case index
           when Hash
-          add_index(options.delete(:column) || column_name, index_name)
+            add_index(options.delete(:column) || column_name, index)
           when TrueClass
-          add_index(column_name)
+            add_index(column_name)
           when String, Symbol, Array
-          add_index(index_name)
+            add_index(index)
           end
         end
       end
