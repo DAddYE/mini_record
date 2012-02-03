@@ -318,4 +318,16 @@ describe MiniRecord do
     Foo.db_indexes.must_include 'index_foos_on_name'
     Foo.db_indexes.must_include 'index_foos_on_surname'
   end
+
+  it 'should create a unique index' do
+    class Foo < ActiveRecord::Base
+      key :name, :surname
+      add_index([:name, :surname], :unique => true)
+    end
+    Foo.auto_upgrade!
+    db_indexes = Foo.connection.indexes('foos')[0]
+    db_indexes.name.must_equal 'index_foos_on_name_and_surname'
+    db_indexes.unique.must_equal true
+    db_indexes.columns.sort.must_equal ['name', 'surname']
+  end
 end
