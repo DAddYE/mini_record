@@ -293,4 +293,20 @@ describe MiniRecord do
     Foo.schema_columns.must_include 'bar_id'
     Foo.indexes.must_include 'index_foos_on_bar_id'
   end
+
+  it 'should add new columns without lost belongs_to schema' do
+    publisher  = Publisher.create(:name => 'foo')
+    article = Article.create(:title => 'bar', :publisher => publisher)
+    article.valid?.must_equal true
+    Article.indexes.must_include 'index_articles_on_publisher_id'
+    # Here we perform a schema change
+    Article.key :body
+    Article.auto_upgrade!
+    article.reload
+    article.body.must_be_nil
+    article.update_attribute(:body, 'null')
+    article.body.must_equal 'null'
+    # Finally check the index existance
+    Article.indexes.must_include 'index_articles_on_publisher_id'
+  end
 end
