@@ -14,10 +14,10 @@ module MiniRecord
         return superclass.table_definition unless superclass == ActiveRecord::Base
 
         @_table_definition ||= begin
-                                 tb = ActiveRecord::ConnectionAdapters::TableDefinition.new(connection)
-                                 tb.primary_key(primary_key)
-                                 tb
-                               end
+          tb = ActiveRecord::ConnectionAdapters::TableDefinition.new(connection)
+          tb.primary_key(primary_key)
+          tb
+        end
       end
 
       def indexes
