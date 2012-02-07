@@ -65,3 +65,13 @@ end
 class Activity < ActiveRecord::Base
   belongs_to :author, :class_name => 'Account', :foreign_key => 'custom_id'
 end
+
+class Page < ActiveRecord::Base
+  key :title
+  has_and_belongs_to_many :photogalleries
+end
+
+class Photogallery < ActiveRecord::Base
+  key :ttile
+  has_and_belongs_to_many :pages
+end

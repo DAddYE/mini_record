@@ -14,10 +14,10 @@ module MiniRecord
         return superclass.table_definition unless superclass == ActiveRecord::Base
 
         @_table_definition ||= begin
-          tb = ActiveRecord::ConnectionAdapters::TableDefinition.new(connection)
-          tb.primary_key(primary_key)
-          tb
-        end
+                                 tb = ActiveRecord::ConnectionAdapters::TableDefinition.new(connection)
+                                 tb.primary_key(primary_key)
+                                 tb
+                               end
       end
 
       def indexes
@@ -144,6 +144,7 @@ module MiniRecord
                     t.integer foreign_key
                     t.integer association_foreign_key
                   end
+                  association.options[:name] = "index_#{table}_on_#{[foreign_key, association_foreign_key].map(&:to_sym) * '_and_'}"[0..63]
                   connection.add_index table.to_sym, [foreign_key, association_foreign_key].map(&:to_sym), association.options
                 end
                 # Add join table to our schema tables

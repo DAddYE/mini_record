@@ -245,6 +245,17 @@ describe MiniRecord do
     Tool.connection.indexes('purposes_tools').map(&:name).must_include index
   end
 
+  it 'creates a join table with indexes for has_and_belongs_to_many relations with long name' do
+    tables = Photogallery.connection.tables
+    tables.must_include('pages_photogalleries')
+    index = 'index_pages_photogalleries_on_pages_photogallery_id_and_photogallery_id'[0..63]
+    Tool.connection.indexes('pages_photogalleries').map(&:name).must_include index
+    # Ensure that join table is not deleted on subsequent upgrade
+    Tool.auto_upgrade!
+    tables.must_include('pages_photogalleries')
+    Tool.connection.indexes('pages_photogalleries').map(&:name).must_include index
+  end
+
   it 'drops join table if has_and_belongs_to_many relation is deleted' do
     Tool.schema_tables.delete('purposes_tools')
     ActiveRecord::Base.schema_tables.wont_include('purposes_tools')
