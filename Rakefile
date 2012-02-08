@@ -20,8 +20,8 @@ end
 
 task :release => :bump
 Rake::TestTask.new(:test) do |test|
-  test.libs << 'spec'
-  test.test_files = Dir['spec/**/*_spec.rb']
+  test.libs << 'test'
+  test.test_files = Dir['test/**/test_*.rb']
   test.verbose = true
 end
 

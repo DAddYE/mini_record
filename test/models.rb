@@ -1,6 +1,3 @@
-ActiveRecord::Base.establish_connection(:adapter => 'sqlite3', :database => ':memory:')
-# ActiveRecord::Base.logger = ActiveSupport::BufferedLogger.new($stdout)
-
 class Person < ActiveRecord::Base
   schema do |s|
     s.string :name
