@@ -14,10 +14,10 @@ module MiniRecord
         return superclass.table_definition unless superclass == ActiveRecord::Base
 
         @_table_definition ||= begin
-          tb = ActiveRecord::ConnectionAdapters::TableDefinition.new(connection)
-          tb.primary_key(primary_key)
-          tb
-        end
+                                 tb = ActiveRecord::ConnectionAdapters::TableDefinition.new(connection)
+                                 tb.primary_key(primary_key)
+                                 tb
+                               end
       end
 
       def indexes
@@ -173,8 +173,8 @@ module MiniRecord
           (fields_in_schema.keys - fields_in_db.keys).each do |field|
             column  = fields_in_schema[field]
             options = {:limit => column.limit, :precision => column.precision, :scale => column.scale}
-            options[:default] = column.default if !column.default.nil?
-            options[:null]    = column.null    if !column.null.nil?
+            options[:default] = column.default unless column.default.nil?
+            options[:null]    = column.null    unless column.null.nil?
             connection.add_column table_name, column.name, column.type.to_sym, options
           end
 
@@ -199,7 +199,8 @@ module MiniRecord
               # This catches stuff like :null, :precision, etc
               fields_in_schema[field].each_pair do |att,value|
                 next if att == :type or att == :base or att == :name # special cases
-                if !value.nil? && value != fields_in_db[field].send(att)
+                value = true if att == :null && value.nil?
+                if value != fields_in_db[field].send(att)
                   new_attr[att] = value
                   changed = true
                 end
