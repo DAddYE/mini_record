@@ -337,6 +337,19 @@ describe MiniRecord do
       assert_includes cols, 'custom_foo_id'
       assert_includes cols, 'customer_id'
     end
+
+    it 'creates a join table with indexes for has_and_belongs_to_many relations with long index name' do
+      tables = Photogallery.connection.tables
+      assert_includes tables, 'pages_photogalleries'
+      index_name_length = Photogallery.connection.index_name_length
+      index = 'index_pages_photogalleries_on_pages_photogallery_id_and_photogallery_id'[0..index_name_length -1]
+      assert_includes Photogallery.connection.indexes('pages_photogalleries').map(&:name), index
+
+      # Ensure that join table is not deleted on subsequent upgrade
+      Photogallery.auto_upgrade!
+      assert_includes tables, 'pages_photogalleries'
+      assert_includes Photogallery.connection.indexes('pages_photogalleries').map(&:name), index
+    end
   end
 
   it 'should add multiple index' do

@@ -144,7 +144,10 @@ module MiniRecord
                     t.integer foreign_key
                     t.integer association_foreign_key
                   end
-                  association.options[:name] = "index_#{table}_on_#{[foreign_key, association_foreign_key].map(&:to_sym) * '_and_'}"[0..63]
+                  options_name = "index_#{table}_on_#{[foreign_key, association_foreign_key].map(&:to_sym) * '_and_'}"
+                  if options_name.length > connection.index_name_length
+                    association.options[:name] = options_name[0..connection.index_name_length-1]
+                  end
                   connection.add_index table.to_sym, [foreign_key, association_foreign_key].map(&:to_sym), association.options
                 end
                 # Add join table to our schema tables
