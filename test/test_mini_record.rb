@@ -200,6 +200,13 @@ describe MiniRecord do
     assert_empty Foo.queries
     assert_equal %w[id name], Foo.db_columns
     assert_equal %w[id name], Foo.schema_columns
+
+    foo = Foo.create(:name => 'test')
+    assert_empty Foo.first.name
+
+    foo.update_attribute(:name, 'foo')
+
+    assert_equal 'foo', Foo.first.name
   end
 
   describe 'relation #belongs_to' do
