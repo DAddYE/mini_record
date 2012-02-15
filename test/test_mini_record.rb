@@ -187,6 +187,21 @@ describe MiniRecord do
     assert_equal 2, fake.group_id
   end
 
+  it 'allow custom query' do
+    skip unless conn.adapter_name =~ /mysql/i
+
+    class Foo < ActiveRecord::Base
+      col :name, :as => "ENUM('foo','bar')"
+    end
+    Foo.auto_upgrade!
+    assert_match /ENUM/, Foo.queries
+
+    Foo.auto_upgrade!
+    assert_empty Foo.queries
+    assert_equal %w[id name], Foo.db_columns
+    assert_equal %w[id name], Foo.schema_columns
+  end
+
   describe 'relation #belongs_to' do
     it 'creates a column and index based on relation' do
       Article.create(:title => 'Hello', :publisher_id => 1)
@@ -338,7 +353,7 @@ describe MiniRecord do
       assert_includes cols, 'customer_id'
     end
 
-    it 'creates a join table with indexes for has_and_belongs_to_many relations with long index name' do
+    it 'creates a join table with indexes with long indexes names' do
       tables = Photogallery.connection.tables
       assert_includes tables, 'pages_photogalleries'
       index_name_length = Photogallery.connection.index_name_length

@@ -33,7 +33,17 @@ module MiniRecord
         type  = options.delete(:as) || options.delete(:type) || :string
         index = options.delete(:index)
         args.each do |column_name|
-          table_definition.send(type, column_name, options)
+          # Allow custom types like:
+          #   t.column :type, "ENUM('EMPLOYEE','CLIENT','SUPERUSER','DEVELOPER')"
+          if type.is_a?(String)
+            table_definition.column(column_name, type, options.reverse_merge(:limit => 0))
+          # else translate in:
+          #   t.references :parent
+          #   t.string     :name
+          else
+            table_definition.send(type, column_name, options)
+          end
+          # Get the formatted column name and add correctly index
           column_name = table_definition.columns[-1].name
           case index
           when Hash
@@ -190,7 +200,9 @@ module MiniRecord
               new_attr = {}
 
               # First, check if the field type changed
-              if fields_in_schema[field].type.to_sym != fields_in_db[field].type.to_sym
+              if fields_in_schema[field].sql_type.to_s.downcase != fields_in_db[field].sql_type.to_s.downcase
+                logger.debug "[MiniRecord] Detected schema changed for #{table_name}.#{field}#type from " +
+                             "#{fields_in_schema[field].sql_type.to_s.downcase.inspect} in #{fields_in_db[field].sql_type.to_s.downcase.inspect}" if logger
                 changed = true
               end
 
@@ -205,6 +217,8 @@ module MiniRecord
                 next if att == :type or att == :base or att == :name # special cases
                 value = true if att == :null && value.nil?
                 if value != fields_in_db[field].send(att)
+                  logger.debug "[MiniRecord] Detected schema changed for #{table_name}.#{field}##{att} "+
+                               "from #{fields_in_db[field].send(att).inspect} in #{value.inspect}" if logger
                   new_attr[att] = value
                   changed = true
                 end
