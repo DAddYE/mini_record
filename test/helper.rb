@@ -7,6 +7,13 @@ class ActiveRecord::Base
   class << self
     attr_accessor :logs
 
+    def db_fields
+      connection.columns(table_name).inject({}) do |hash, column|
+        hash[column.name.to_sym] = column
+        hash
+      end
+    end
+
     def db_columns
       connection.columns(table_name).map(&:name).sort
     end
@@ -17,6 +24,13 @@ class ActiveRecord::Base
 
     def schema_columns
       table_definition.columns.map { |c| c.name.to_s }.sort
+    end
+
+    def schema_fields
+      table_definition.columns.inject({}) do |hash, column|
+        hash[column.name.to_sym] = column
+        hash
+      end
     end
 
     def queries(pragma=false)
