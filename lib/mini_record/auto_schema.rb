@@ -160,15 +160,15 @@ module MiniRecord
                           [table_name, association.name.to_s].sort.join("_")
                         end
                 unless connection.tables.include?(table.to_s)
-                  foreign_key             = association.options[:foreign_key] || "#{table.singularize}_id"
-                  association_foreign_key = association.options[:association_foreign_key] || "#{association.name.to_s.singularize}_id"
+                  foreign_key             = association.options[:foreign_key] || association.foreign_key
+                  association_foreign_key = association.options[:association_foreign_key] || association.association_foreign_key
                   connection.create_table(table, :id => false) do |t|
                     t.integer foreign_key
                     t.integer association_foreign_key
                   end
                   index_name = connection.index_name(table, :column => [foreign_key, association_foreign_key])
                   index_name = index_name[0...connection.index_name_length] if index_name.length > connection.index_name_length
-                  connection.add_index table.to_sym, [foreign_key, association_foreign_key].map(&:to_sym), :name => index_name
+                  connection.add_index table, [foreign_key, association_foreign_key], :name => index_name, :unique => true
                 end
                 # Add join table to our schema tables
                 schema_tables << table unless schema_tables.include?(table)
@@ -215,6 +215,9 @@ module MiniRecord
               # Always include them in the attr struct, but they'll only get applied if changed = true
               new_attr[:precision] = fields[field][:precision]
               new_attr[:scale]     = fields[field][:scale]
+
+              # If we have precision this is also the limit
+              fields[field][:limit] ||= fields[field][:precision]
 
               # Next, iterate through our extended attributes, looking for any differences
               # This catches stuff like :null, :precision, etc

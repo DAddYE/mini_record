@@ -69,6 +69,6 @@ class Page < ActiveRecord::Base
 end
 
 class Photogallery < ActiveRecord::Base
-  key :ttile
+  key :title
   has_and_belongs_to_many :pages
 end

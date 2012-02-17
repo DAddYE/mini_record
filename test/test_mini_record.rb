@@ -3,7 +3,7 @@ require File.expand_path('../helper.rb', __FILE__)
 describe MiniRecord do
 
   before do
-    ActiveRecord::Base.descendants.each { |klass| silence_stream(STDERR) { connection.execute "DROP TABLE IF EXISTS #{klass.table_name}" } }
+    conn.tables.each { |table| silence_stream(STDERR) { conn.execute "DROP TABLE IF EXISTS #{table}" } }
     ActiveRecord::Base.descendants.each { |klass| Object.send(:remove_const, klass.to_s) }
     ActiveSupport::DescendantsTracker.direct_descendants(ActiveRecord::Base).clear
     load File.expand_path('../models.rb', __FILE__)
@@ -119,6 +119,16 @@ describe MiniRecord do
     assert_equal new_indexes.sort, Animal.db_indexes
   end
 
+  it 'not add already defined indexes' do
+    class Foo < ActiveRecord::Base
+      index :customer_id, :unique => true, :name => 'by_customer'
+      belongs_to :customer
+    end
+    Foo.auto_upgrade!
+    assert_equal 1, Foo.db_indexes.size
+    assert_includes Foo.db_indexes, 'by_customer'
+  end
+
   it 'works with STI' do
     class Dog < Pet; end
     class Cat < Pet; end
@@ -173,6 +183,7 @@ describe MiniRecord do
     assert_equal 2, User.count
     assert_equal 'Administrator', User.first.role
     assert_equal 'Customer', User.last.role
+    assert_includes User.db_indexes, 'index_users_on_role'
   end
 
   it 'allow multiple columns definitions' do
@@ -317,11 +328,11 @@ describe MiniRecord do
 
     it 'should not override previous defined column relation' do
       class Foo < ActiveRecord::Base
-        key :user, :as => :references, :null => false, :limit => 2
+        key :user, :as => :references, :null => false, :limit => 4
         belongs_to :user
       end
       Foo.auto_upgrade!
-      assert_equal 2, Foo.db_fields[:user_id].limit
+      assert_equal 4, Foo.db_fields[:user_id].limit
       assert_equal false, Foo.db_fields[:user_id].null
     end
   end
@@ -331,7 +342,7 @@ describe MiniRecord do
       tables = Tool.connection.tables
       assert_includes tables, 'purposes_tools'
 
-      index = 'index_purposes_tools_on_purposes_tool_id_and_purpose_id'
+      index = 'index_purposes_tools_on_tool_id_and_purpose_id'
       assert_includes Tool.connection.indexes('purposes_tools').map(&:name), index
 
       # Ensure that join table is not deleted on subsequent upgrade
@@ -350,28 +361,38 @@ describe MiniRecord do
 
     it 'has_and_belongs_to_many with custom join_table and foreign keys' do
       class Foo < ActiveRecord::Base
-        has_and_belongs_to_many :watchers, :join_table => :watchers, :foreign_key => :custom_foo_id, :association_foreign_key => :customer_id
+        has_and_belongs_to_many :watchers, :join_table => :watching, :foreign_key => :custom_foo_id, :association_foreign_key => :customer_id
       end
       Foo.auto_upgrade!
-      assert_includes conn.tables, 'watchers'
+      assert_includes conn.tables, 'watching'
 
-      cols = conn.columns('watchers').map(&:name)
+      cols = conn.columns('watching').map(&:name)
       refute_includes cols, 'id'
       assert_includes cols, 'custom_foo_id'
       assert_includes cols, 'customer_id'
     end
 
     it 'creates a join table with indexes with long indexes names' do
-      tables = Photogallery.connection.tables
-      assert_includes tables, 'pages_photogalleries'
-      index_name_length = Photogallery.connection.index_name_length
-      index = 'index_pages_photogalleries_on_pages_photogallery_id_and_photogallery_id'[0..index_name_length -1]
-      assert_includes Photogallery.connection.indexes('pages_photogalleries').map(&:name), index
+      class Foo < ActiveRecord::Base
+        has_and_belongs_to_many :people,   :join_table  => :long_people,
+                                           :foreign_key => :custom_long_long_long_long_id,
+                                           :association_foreign_key => :customer_super_long_very_long_trust_me_id
+      end
+      Foo.auto_upgrade!
+      index_name = 'index_long_people_on_custom_long_long_long_long_id_and_customer_super_long_very_long_trust_me_id'[0...conn.index_name_length]
+      assert_includes conn.tables, 'people'
+      assert_includes conn.indexes(:long_people).map(&:name), index_name
+    end
 
-      # Ensure that join table is not deleted on subsequent upgrade
-      Photogallery.auto_upgrade!
-      assert_includes tables, 'pages_photogalleries'
-      assert_includes Photogallery.connection.indexes('pages_photogalleries').map(&:name), index
+    it 'adds unique index' do
+      page = Page.create(:title => 'Foo')
+      photogallery = Photogallery.create(:title => 'Bar')
+      assert photogallery.valid?
+
+      photogallery.pages << page
+      refute_empty Photogallery.queries
+      assert_includes photogallery.reload.pages, page
+      assert_raises(ActiveRecord::RecordNotUnique, ActiveRecord::StatementInvalid){ photogallery.pages << page }
     end
   end
 
@@ -458,5 +479,25 @@ describe MiniRecord do
     Foo.auto_upgrade!
     assert_match /alter/i, Foo.queries
     refute Foo.db_fields[:string].null
+  end
+
+  it 'should change #scale #precision' do
+    class Foo < ActiveRecord::Base
+      field :currency, :as => :decimal, :precision => 8, :scale => 2
+    end
+    Foo.auto_upgrade!
+    assert_equal 8, Foo.db_fields[:currency].precision
+    assert_equal 2, Foo.db_fields[:currency].scale
+    assert_equal 8, Foo.db_fields[:currency].limit
+
+    Foo.auto_upgrade!
+    refute_match /alter/i, Foo.queries
+
+    Foo.field :currency, :as => :decimal, :precision => 4, :scale => 2, :limit => 5
+    Foo.auto_upgrade!
+    assert_match /alter/i, Foo.queries
+    assert_equal 4, Foo.db_fields[:currency].precision
+    assert_equal 2, Foo.db_fields[:currency].scale
+    assert_equal 4, Foo.db_fields[:currency].limit
   end
 end
