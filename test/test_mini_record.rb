@@ -122,6 +122,7 @@ describe MiniRecord do
   it 'works with STI' do
     class Dog < Pet; end
     class Cat < Pet; end
+    class Kitten < Cat; end
     ActiveRecord::Base.auto_upgrade!
 
     # Check inheritance column
@@ -130,10 +131,11 @@ describe MiniRecord do
     # Now, let's we know if STI is working
     Pet.create(:name => "foo")
     Dog.create(:name => "bar")
+    Kitten.create(:name => 'foxy')
     assert_equal 1, Dog.count
     assert_equal 'bar', Dog.first.name
-    assert_equal 2, Pet.count
-    assert_equal %w[foo bar], Pet.all.map(&:name)
+    assert_equal 3, Pet.count
+    assert_equal %w[foo bar foxy], Pet.all.map(&:name)
     assert_equal 'bar', Dog.first.name
 
     # What's happen if we change schema?
@@ -314,7 +316,6 @@ describe MiniRecord do
     end
 
     it 'should not override previous defined column relation' do
-      skip
       class Foo < ActiveRecord::Base
         key :user, :as => :references, :null => false, :limit => 2
         belongs_to :user

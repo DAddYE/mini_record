@@ -26,25 +26,50 @@ module MiniRecord
         @_indexes ||= {}
       end
 
-      def col(*args)
+      def indexes_in_db
+        connection.indexes(table_name).inject({}) do |hash, index|
+          hash[index.name] = index
+          hash
+        end
+      end
+
+      def fields
+        table_definition.columns.inject({}) do |hash, column|
+          hash[column.name] = column
+          hash
+        end
+      end
+
+      def fields_in_db
+        connection.columns(table_name).inject({}) do |hash, column|
+          hash[column.name] = column
+          hash
+        end
+      end
+
+      def field(*args)
         return unless connection?
 
-        options = args.extract_options!
-        type  = options.delete(:as) || options.delete(:type) || :string
-        index = options.delete(:index)
+        options    = args.extract_options!
+        type       = options.delete(:as) || options.delete(:type) || :string
+        index      = options.delete(:index)
+
         args.each do |column_name|
+
           # Allow custom types like:
           #   t.column :type, "ENUM('EMPLOYEE','CLIENT','SUPERUSER','DEVELOPER')"
           if type.is_a?(String)
+            # will be converted in: t.column :type, "ENUM('EMPLOYEE','CLIENT')"
             table_definition.column(column_name, type, options.reverse_merge(:limit => 0))
-          # else translate in:
-          #   t.references :parent
-          #   t.string     :name
           else
+            # wil be converted in: t.string :name
             table_definition.send(type, column_name, options)
           end
-          # Get the formatted column name and add correctly index
+
+          # Get the correct column_name i.e. in field :category, :as => :references
           column_name = table_definition.columns[-1].name
+
+          # Parse indexes
           case index
           when Hash
             add_index(options.delete(:column) || column_name, index)
@@ -55,13 +80,12 @@ module MiniRecord
           end
         end
       end
-      alias :key :col
-      alias :property :col
-      alias :field :col
-      alias :attribute :col
+      alias :key       :field
+      alias :property  :field
+      alias :col       :field
 
       def timestamps
-        col :created_at, :updated_at, :as => :datetime
+        field :created_at, :updated_at, :as => :datetime
       end
 
       def reset_table_definition!
@@ -74,14 +98,10 @@ module MiniRecord
         yield table_definition
         table_definition
       end
-      alias :keys :schema
-      alias :properties :schema
-      alias :fields :schema
-      alias :attributes :schema
 
       def add_index(column_name, options={})
         index_name = connection.index_name(table_name, :column => column_name)
-        indexes[index_name] = options.merge(:column => column_name)
+        indexes[index_name] = options.merge(:column => column_name) unless indexes.key?(index_name)
         index_name
       end
       alias :index :add_index
@@ -94,7 +114,6 @@ module MiniRecord
       end
 
       def clear_tables!
-        # Drop unsued tables
         (connection.tables - schema_tables).each do |name|
           connection.drop_table(name)
           schema_tables.delete(name)
@@ -108,7 +127,7 @@ module MiniRecord
           descendants.each(&:auto_upgrade!)
           clear_tables!
         else
-          # Table doesn't exist, create it
+          # If table doesn't exist, create it
           unless connection.tables.include?(table_name)
             # TODO: create_table options
             class << connection; attr_accessor :table_definition; end unless connection.respond_to?(:table_definition=)
@@ -120,25 +139,19 @@ module MiniRecord
           # Add this to our schema tables
           schema_tables << table_name unless schema_tables.include?(table_name)
 
-          # Grab database columns
-          fields_in_db = connection.columns(table_name).inject({}) do |hash, column|
-            hash[column.name] = column
-            hash
-          end
-
           # Generate fields from associations
           if reflect_on_all_associations.any?
             reflect_on_all_associations.each do |association|
-              foreign_key = association.options[:foreign_key] || "#{association.name.to_s}_id"
+              foreign_key = association.options[:foreign_key] || "#{association.name}_id"
               type_key    = "#{association.name.to_s}_type"
               case association.macro
               when :belongs_to
-                table_definition.column(foreign_key, :integer)
+                field foreign_key, :as => :integer unless fields.key?(foreign_key.to_s)
                 if association.options[:polymorphic]
-                  table_definition.column(type_key, :string)
-                  add_index [foreign_key, type_key]
+                  field type_key, :as => :string unless fields.key?(type_key.to_s)
+                  index [foreign_key, type_key]
                 else
-                  add_index foreign_key
+                  index foreign_key
                 end
               when :has_and_belongs_to_many
                 table = if name = association.options[:join_table]
@@ -146,7 +159,6 @@ module MiniRecord
                         else
                           [table_name, association.name.to_s].sort.join("_")
                         end
-                index = ""
                 unless connection.tables.include?(table.to_s)
                   foreign_key             = association.options[:foreign_key] || "#{table.singularize}_id"
                   association_foreign_key = association.options[:association_foreign_key] || "#{association.name.to_s.singularize}_id"
@@ -154,11 +166,9 @@ module MiniRecord
                     t.integer foreign_key
                     t.integer association_foreign_key
                   end
-                  options_name = "index_#{table}_on_#{[foreign_key, association_foreign_key].map(&:to_sym) * '_and_'}"
-                  if options_name.length > connection.index_name_length
-                    association.options[:name] = options_name[0..connection.index_name_length-1]
-                  end
-                  connection.add_index table.to_sym, [foreign_key, association_foreign_key].map(&:to_sym), association.options
+                  index_name = connection.index_name(table, :column => [foreign_key, association_foreign_key])
+                  index_name = index_name[0...connection.index_name_length] if index_name.length > connection.index_name_length
+                  connection.add_index table.to_sym, [foreign_key, association_foreign_key].map(&:to_sym), :name => index_name
                 end
                 # Add join table to our schema tables
                 schema_tables << table unless schema_tables.include?(table)
@@ -166,26 +176,21 @@ module MiniRecord
             end
           end
 
-          # Grab new schema
-          fields_in_schema = table_definition.columns.inject({}) do |hash, column|
-            hash[column.name.to_s] = column
-            hash
-          end
-
           # Add to schema inheritance column if necessary
-          if descendants.present? && !fields_in_schema.include?(inheritance_column.to_s)
-            table_definition.column inheritance_column, :string
+          if descendants.present?
+            field inheritance_column, :as => :string unless fields.key?(inheritance_column.to_s)
+            index inheritance_column
           end
 
           # Remove fields from db no longer in schema
-          (fields_in_db.keys - fields_in_schema.keys & fields_in_db.keys).each do |field|
+          (fields_in_db.keys - fields.keys & fields_in_db.keys).each do |field|
             column = fields_in_db[field]
             connection.remove_column table_name, column.name
           end
 
           # Add fields to db new to schema
-          (fields_in_schema.keys - fields_in_db.keys).each do |field|
-            column  = fields_in_schema[field]
+          (fields.keys - fields_in_db.keys).each do |field|
+            column  = fields[field]
             options = {:limit => column.limit, :precision => column.precision, :scale => column.scale}
             options[:default] = column.default unless column.default.nil?
             options[:null]    = column.null    unless column.null.nil?
@@ -193,31 +198,31 @@ module MiniRecord
           end
 
           # Change attributes of existent columns
-          (fields_in_schema.keys & fields_in_db.keys).each do |field|
+          (fields.keys & fields_in_db.keys).each do |field|
             if field != primary_key #ActiveRecord::Base.get_primary_key(table_name)
               changed  = false  # flag
-              new_type = fields_in_schema[field].type.to_sym
+              new_type = fields[field].type.to_sym
               new_attr = {}
 
               # First, check if the field type changed
-              if fields_in_schema[field].sql_type.to_s.downcase != fields_in_db[field].sql_type.to_s.downcase
-                logger.debug "[MiniRecord] Detected schema changed for #{table_name}.#{field}#type from " +
-                             "#{fields_in_schema[field].sql_type.to_s.downcase.inspect} in #{fields_in_db[field].sql_type.to_s.downcase.inspect}" if logger
+              if fields[field].sql_type.to_s.downcase != fields_in_db[field].sql_type.to_s.downcase
+                logger.debug "[MiniRecord] Detected schema change for #{table_name}.#{field}#type from " +
+                             "#{fields[field].sql_type.to_s.downcase.inspect} in #{fields_in_db[field].sql_type.to_s.downcase.inspect}" if logger
                 changed = true
               end
 
               # Special catch for precision/scale, since *both* must be specified together
               # Always include them in the attr struct, but they'll only get applied if changed = true
-              new_attr[:precision] = fields_in_schema[field][:precision]
-              new_attr[:scale]     = fields_in_schema[field][:scale]
+              new_attr[:precision] = fields[field][:precision]
+              new_attr[:scale]     = fields[field][:scale]
 
               # Next, iterate through our extended attributes, looking for any differences
               # This catches stuff like :null, :precision, etc
-              fields_in_schema[field].each_pair do |att,value|
+              fields[field].each_pair do |att,value|
                 next if att == :type or att == :base or att == :name # special cases
                 value = true if att == :null && value.nil?
                 if value != fields_in_db[field].send(att)
-                  logger.debug "[MiniRecord] Detected schema changed for #{table_name}.#{field}##{att} "+
+                  logger.debug "[MiniRecord] Detected schema change for #{table_name}.#{field}##{att} "+
                                "from #{fields_in_db[field].send(att).inspect} in #{value.inspect}" if logger
                   new_attr[att] = value
                   changed = true
@@ -230,9 +235,7 @@ module MiniRecord
           end
 
           # Remove old index
-          # TODO: remove index from habtm t
-          indexes_in_db = connection.indexes(table_name).map(&:name)
-          (indexes_in_db - indexes.keys).each do |name|
+          (indexes_in_db.keys - indexes.keys).each do |name|
             connection.remove_index(table_name, :name => name)
           end
 
@@ -247,7 +250,6 @@ module MiniRecord
           # Reload column information
           reset_column_information
         end
-
       end
     end # ClassMethods
   end # AutoSchema
