@@ -3,6 +3,9 @@ require File.expand_path('../helper.rb', __FILE__)
 describe MiniRecord do
 
   before do
+    ActiveRecord::Base.clear_reloadable_connections!
+    ActiveRecord::Base.clear_cache!
+    ActiveRecord::Base.clear_active_connections!
     conn.tables.each { |table| silence_stream(STDERR) { conn.execute "DROP TABLE IF EXISTS #{table}" } }
     ActiveRecord::Base.descendants.each { |klass| Object.send(:remove_const, klass.to_s) }
     ActiveSupport::DescendantsTracker.direct_descendants(ActiveRecord::Base).clear
@@ -40,7 +43,7 @@ describe MiniRecord do
     assert_equal 'foo', person.name
     assert_nil person.surname
 
-    person.update_attribute(:surname, 'bar')
+    person.update_column(:surname, 'bar')
     assert_equal %w[created_at id name surname updated_at], Person.db_columns.sort
 
     # Remove a column without lost data
@@ -217,7 +220,7 @@ describe MiniRecord do
     foo = Foo.create(:name => 'test')
     assert_empty Foo.first.name
 
-    foo.update_attribute(:name, 'foo')
+    foo.update_column(:name, 'foo')
 
     assert_equal 'foo', Foo.first.name
   end
@@ -319,7 +322,7 @@ describe MiniRecord do
       article.reload
       assert_nil article.body
 
-      article.update_attribute(:body, 'null')
+      article.update_column(:body, 'null')
       assert_equal 'null', article.body
 
       # Finally check the index existance

@@ -1,6 +1,7 @@
-require "bundler/gem_tasks"
-require "rake"
-require "rake/testtask"
+require 'rubygems'
+require 'bundler/gem_tasks'
+require 'rake'
+require 'rake/testtask'
 
 %w(install release).each do |task|
   Rake::Task[task].enhance do
