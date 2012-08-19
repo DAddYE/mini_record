@@ -5,8 +5,8 @@ rvm:
   - 1.9.2
   - 1.9.3
   - rbx-18mode
-  - ruby-head
+  - rbx
   - ree
 notifications:
   recipients:
-    - d.dagostino@lipsiasoft.com
+    - info@daddye.it
