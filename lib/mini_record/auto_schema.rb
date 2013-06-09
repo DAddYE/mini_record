@@ -85,7 +85,7 @@ module MiniRecord
       alias :col       :field
 
       def timestamps
-        field :created_at, :updated_at, :as => :datetime
+        field :created_at, :updated_at, :as => :datetime, :null => false
       end
 
       def reset_table_definition!
