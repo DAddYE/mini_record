@@ -96,7 +96,7 @@ class Address < ActiveRecord::Base
   index :person_id, :foreign => true
 end
 ```
-The same as in the previous case, but foreign key will be added to the database with help of foreigner [foreigner](https://github.com/matthuhiggins/foreigner) gem.
+The same as in the previous case, but foreign key will be added to the database with help of [foreigner](https://github.com/matthuhiggins/foreigner) gem.
 
 #### belongs_to (polymorphic)
 ```ruby
