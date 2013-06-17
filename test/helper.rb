@@ -49,6 +49,10 @@ end # ActiveRecord::Base
 case ENV['DB']
 when 'mysql'
   ActiveRecord::Base.establish_connection(:adapter => 'mysql', :database => 'test', :user => 'root')
+when 'mysql2'
+  ActiveRecord::Base.establish_connection(:adapter => 'mysql2', :database => 'test', :user => 'root')
+  Bundler.require(:test)  # require 'foreigner'
+  Foreigner.load
 when 'pg', 'postgresql'
   ActiveRecord::Base.establish_connection(:adapter => 'postgresql', :database => 'test', :user => 'postgres', :host => 'localhost')
 else
