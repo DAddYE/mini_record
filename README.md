@@ -51,7 +51,7 @@ Instead of `:as => :my_type` you can use `:type => :my_type`
 Option `:as` or `:type` if not provided is `:string` by default, you can use all ActiveRecord types:
 
 ``` rb
-:primary_key, :string, :text, :integer, :float, :decimal, :datetime, :timestamp, :time, 
+:primary_key, :string, :text, :integer, :float, :decimal, :datetime, :timestamp, :time,
 :date, :binary, :boolean, :references, :belongs_to, :timestamp
 ```
 
@@ -88,6 +88,15 @@ class Address < ActiveRecord::Base
 end
 ```
 Will result in a person_id column (you can override with the `foreign_key` option) which is indexed
+
+#### belongs_to with foreign key in database
+```ruby
+class Address < ActiveRecord::Base
+  belongs_to :person
+  index :person_id, :foreign => true
+end
+```
+The same as in the previous case, but foreign key will be added to the database with help of [foreigner](https://github.com/matthuhiggins/foreigner) gem.
 
 #### belongs_to (polymorphic)
 ```ruby
