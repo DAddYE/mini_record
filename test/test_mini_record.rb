@@ -7,7 +7,7 @@ describe MiniRecord do
     ActiveRecord::Base.clear_cache!
     ActiveRecord::Base.clear_active_connections!
     conn.tables.each { |table| silence_stream(STDERR) { conn.execute "DROP TABLE IF EXISTS #{table}" } }
-    ActiveRecord::Base.descendants.each { |klass| Object.send(:remove_const, klass.to_s) }
+    ActiveRecord::Base.descendants.each { |klass| Object.send(:remove_const, klass.to_s) if Object.const_defined?(klass.to_s) }
     ActiveSupport::DescendantsTracker.direct_descendants(ActiveRecord::Base).clear
     load File.expand_path('../models.rb', __FILE__)
     ActiveRecord::Base.auto_upgrade!
@@ -338,6 +338,55 @@ describe MiniRecord do
       assert_equal 4, Foo.db_fields[:user_id].limit
       assert_equal false, Foo.db_fields[:user_id].null
     end
+
+    it 'add/remove foreign key with :foreign option, when Foreigner gem used on mysql' do
+      skip unless conn.adapter_name =~ /mysql/i
+
+      class Book < ActiveRecord::Base
+        belongs_to :publisher
+        index :publisher_id, :foreign => true
+      end
+      Book.auto_upgrade!
+
+      assert_includes Book.db_columns, 'publisher_id'
+      assert_includes Book.db_indexes, 'index_books_on_publisher_id'
+
+      assert connection.foreign_keys(:books).detect {|fk| fk.options[:column] == 'publisher_id'}
+
+      Object.send(:remove_const, :Book)
+      class Book < ActiveRecord::Base
+        belongs_to :publisher
+      end
+      Book.auto_upgrade!
+
+      assert_nil connection.foreign_keys(:books).detect {|fk| fk.options[:column] == 'publisher_id'}
+    end
+
+    it 'add/remove named foreign key with :foreign option, when Foreigner gem used on mysql' do
+      skip unless conn.adapter_name =~ /mysql/i
+
+      class Book < ActiveRecord::Base
+        belongs_to :publisher
+        index :publisher_id, :name => 'my_super_publisher_id_fk', :foreign => true
+      end
+      Book.auto_upgrade!
+
+      assert_includes Book.db_columns, 'publisher_id'
+      assert_includes Book.db_indexes, 'my_super_publisher_id_fk'
+
+      assert connection.foreign_keys(:books).detect {|fk| fk.options[:column] == 'publisher_id'}
+
+      Object.send(:remove_const, :Book)
+      class Book < ActiveRecord::Base
+        belongs_to :publisher
+        index :publisher_id, :name => 'my_super_publisher_id_fk'
+      end
+      Book.auto_upgrade!
+
+      assert_nil connection.foreign_keys(:books).detect {|fk| fk.options[:column] == 'publisher_id'}
+      Object.send(:remove_const, :Book)
+    end
+
   end
 
   describe 'relation #habtm' do
@@ -503,4 +552,5 @@ describe MiniRecord do
     assert_equal 2, Foo.db_fields[:currency].scale
     assert_equal 4, Foo.db_fields[:currency].limit
   end
+
 end

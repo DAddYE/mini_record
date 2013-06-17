@@ -120,6 +120,39 @@ module MiniRecord
         end
       end
 
+      # Remove foreign keys for indexes without :foreign=>true option
+      def remove_foreign_keys
+        # fk cache to minimize quantity of sql queries
+        @foreign_keys = connection.foreign_keys(table_name)
+        indexes.each do |name, options|
+          unless options[:foreign]
+            col = options[:column]
+            foreign_key = nil
+            if @foreign_keys.detect do |fk|
+                foreign_key = fk
+                fk.options[:column] == col.to_s #|| i.options[:name] == name
+              end
+              connection.remove_foreign_key(table_name, :name => foreign_key.options[:name])
+              @foreign_keys.delete(foreign_key)
+            end
+          end
+        end
+      end
+
+      # Add foreign keys for indexes with :foreign=>true option, if the key doesn't exists
+      def add_foreign_keys
+        indexes.each do |name, options|
+          if options[:foreign]
+            column = options[:column].to_s
+            unless @foreign_keys.detect { |fk| fk[:options][:column] == column }
+              to_table = column[0...-3].tableize
+              connection.add_foreign_key(table_name, to_table, options)
+              @foreign_keys << { :options=> { :column=>column } }
+            end
+          end
+        end
+      end
+
       def auto_upgrade!
         return unless connection?
 
@@ -237,6 +270,8 @@ module MiniRecord
             end
           end
 
+          remove_foreign_keys if connection.respond_to?(:foreign_keys)
+
           # Remove old index
           (indexes_in_db.keys - indexes.keys).each do |name|
             connection.remove_index(table_name, :name => name)
@@ -249,6 +284,8 @@ module MiniRecord
               connection.add_index(table_name, options.delete(:column), options)
             end
           end
+
+          add_foreign_keys if connection.respond_to?(:foreign_keys)
 
           # Reload column information
           reset_column_information
