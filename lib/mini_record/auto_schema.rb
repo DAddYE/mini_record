@@ -126,12 +126,8 @@ module MiniRecord
         @foreign_keys = connection.foreign_keys(table_name)
         indexes.each do |name, options|
           unless options[:foreign]
-            col = options[:column]
-            foreign_key = nil
-            if @foreign_keys.detect do |fk|
-                foreign_key = fk
-                fk.options[:column] == col.to_s #|| i.options[:name] == name
-              end
+            foreign_key = @foreign_keys.detect { |fk| fk.options[:column] == options[:column].to_s }
+            if foreign_key
               connection.remove_foreign_key(table_name, :name => foreign_key.options[:name])
               @foreign_keys.delete(foreign_key)
             end
@@ -145,7 +141,7 @@ module MiniRecord
           if options[:foreign]
             column = options[:column].to_s
             unless @foreign_keys.detect { |fk| fk[:options][:column] == column }
-              to_table = column[0...-3].tableize
+              to_table = (reflect_on_all_associations.detect { |a| a.foreign_key==column }).table_name
               connection.add_foreign_key(table_name, to_table, options)
               @foreign_keys << { :options=> { :column=>column } }
             end

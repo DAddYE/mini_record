@@ -9,7 +9,7 @@ gem 'mysql'
 gem 'pg'
 
 group :test do
-  gem 'foreigner', :git  => 'https://github.com/virtax/foreigner'
+  gem 'foreigner', '>= 1.4.2'
 end
 
 gemspec
