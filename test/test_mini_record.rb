@@ -387,6 +387,29 @@ describe MiniRecord do
       Object.send(:remove_const, :Book)
     end
 
+    it 'support :foreign option in the index with custom :foreign_key in the belong_to association' do
+      skip unless conn.adapter_name =~ /mysql/i
+
+      class Book < ActiveRecord::Base
+        belongs_to :second_publisher, :foreign_key => 'second_publisher_id', :class_name => 'Publisher'
+        index :second_publisher_id, :foreign => true
+      end
+      Book.auto_upgrade!
+
+      assert_includes Book.db_columns, 'second_publisher_id'
+      assert_includes Book.db_indexes, 'index_books_on_second_publisher_id'
+
+      assert connection.foreign_keys(:books).detect {|fk| fk.options[:column] == 'second_publisher_id'}
+
+      Object.send(:remove_const, :Book)
+      class Book < ActiveRecord::Base
+        belongs_to :second_publisher, :foreign_key => 'second_publisher_id', :class_name => 'Publisher'
+      end
+      Book.auto_upgrade!
+
+      assert_nil connection.foreign_keys(:books).detect {|fk| fk.options[:column] == 'second_publisher_id'}
+    end
+
   end
 
   describe 'relation #habtm' do
