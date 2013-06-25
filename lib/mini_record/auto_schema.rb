@@ -141,7 +141,7 @@ module MiniRecord
           if options[:foreign]
             column = options[:column].to_s
             unless @foreign_keys.detect { |fk| fk[:options][:column] == column }
-              to_table = (reflect_on_all_associations.detect { |a| a.foreign_key==column }).table_name
+              to_table = reflect_on_all_associations.detect { |a| a.foreign_key.to_s==column }.table_name
               connection.add_foreign_key(table_name, to_table, options)
               @foreign_keys << { :options=> { :column=>column } }
             end
