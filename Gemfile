@@ -7,6 +7,7 @@ gem 'sqlite3'
 gem 'mysql2'
 gem 'mysql'
 gem 'pg'
+gem 'activerecord', '<= 3.2'
 
 group :test do
   gem 'foreigner', '>= 1.4.2'
