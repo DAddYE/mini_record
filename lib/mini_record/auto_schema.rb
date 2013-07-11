@@ -120,16 +120,20 @@ module MiniRecord
         end
       end
 
-      # Remove foreign keys for indexes without :foreign=>true option
-      def remove_foreign_keys
+      def foreign_keys
         # fk cache to minimize quantity of sql queries
-        @foreign_keys = connection.foreign_keys(table_name)
+        @foreign_keys ||= {}
+        @foreign_keys[:table_name] ||= connection.foreign_keys(table_name)
+      end
+
+      # Remove foreign keys for indexes with :foreign=>false option
+      def remove_foreign_keys
         indexes.each do |name, options|
-          unless options[:foreign]
-            foreign_key = @foreign_keys.detect { |fk| fk.options[:column] == options[:column].to_s }
+          if options[:foreign]==false
+            foreign_key = foreign_keys.detect { |fk| fk.options[:column] == options[:column].to_s }
             if foreign_key
               connection.remove_foreign_key(table_name, :name => foreign_key.options[:name])
-              @foreign_keys.delete(foreign_key)
+              foreign_keys.delete(foreign_key)
             end
           end
         end
@@ -140,10 +144,10 @@ module MiniRecord
         indexes.each do |name, options|
           if options[:foreign]
             column = options[:column].to_s
-            unless @foreign_keys.detect { |fk| fk[:options][:column] == column }
+            unless foreign_keys.detect { |fk| fk[:options][:column] == column }
               to_table = reflect_on_all_associations.detect { |a| a.foreign_key.to_s==column }.table_name
               connection.add_foreign_key(table_name, to_table, options)
-              @foreign_keys << { :options=> { :column=>column } }
+              foreign_keys << { :options=> { :column=>column } }
             end
           end
         end
