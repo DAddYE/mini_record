@@ -226,6 +226,7 @@ describe MiniRecord do
   end
 
   describe 'relation #belongs_to' do
+
     it 'creates a column and index based on relation' do
       Article.create(:title => 'Hello', :publisher_id => 1)
       Article.first.tap do |a|
@@ -356,6 +357,7 @@ describe MiniRecord do
       Object.send(:remove_const, :Book)
       class Book < ActiveRecord::Base
         belongs_to :publisher
+         index :publisher_id, :foreign => false
       end
       Book.auto_upgrade!
 
@@ -379,7 +381,7 @@ describe MiniRecord do
       Object.send(:remove_const, :Book)
       class Book < ActiveRecord::Base
         belongs_to :publisher
-        index :publisher_id, :name => 'my_super_publisher_id_fk'
+        index :publisher_id, :name => 'my_super_publisher_id_fk', :foreign => false
       end
       Book.auto_upgrade!
 
@@ -404,6 +406,7 @@ describe MiniRecord do
       Object.send(:remove_const, :Book)
       class Book < ActiveRecord::Base
         belongs_to :second_publisher, :foreign_key => 'second_publisher_id', :class_name => 'Publisher'
+        index :second_publisher_id, :foreign => false
       end
       Book.auto_upgrade!
 
@@ -575,5 +578,4 @@ describe MiniRecord do
     assert_equal 2, Foo.db_fields[:currency].scale
     assert_equal 4, Foo.db_fields[:currency].limit
   end
-
 end

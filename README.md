@@ -98,6 +98,9 @@ end
 ```
 The same as in the previous case, but foreign key will be added to the database with help of [foreigner](https://github.com/matthuhiggins/foreigner) gem.
 
+To remove the key please use :foreign => false
+If you simple remove the index, the foreign key will not be removed.
+
 #### belongs_to (polymorphic)
 ```ruby
 class Address < ActiveRecord::Base
