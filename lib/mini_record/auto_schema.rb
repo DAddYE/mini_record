@@ -155,6 +155,7 @@ module MiniRecord
 
       def auto_upgrade!
         return unless connection?
+        return if respond_to?(:abstract_class?) && abstract_class?
 
         if self == ActiveRecord::Base
           descendants.each(&:auto_upgrade!)
