@@ -578,4 +578,22 @@ describe MiniRecord do
     assert_equal 2, Foo.db_fields[:currency].scale
     assert_equal 4, Foo.db_fields[:currency].limit
   end
+
+  it 'should ignore abstract classes' do
+    class Foo < ActiveRecord::Base
+      self.abstract_class = true
+    end
+
+    class Bar < Foo
+    end
+
+    Foo.auto_upgrade!
+    Bar.auto_upgrade!
+
+    tables = Foo.connection.tables
+
+    refute_includes tables, 'foos'
+    refute_includes tables, ''
+    assert_includes tables, 'bars'
+  end
 end
