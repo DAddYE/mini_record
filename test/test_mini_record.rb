@@ -596,4 +596,26 @@ describe MiniRecord do
     refute_includes tables, ''
     assert_includes tables, 'bars'
   end
+
+  it 'should prevent abstract table class to leak columns to other tables' do
+
+    class Base < ActiveRecord::Base
+      self.abstract_class = true
+    end
+
+    class User < Base
+      col :name
+    end
+
+    class Book < Base
+      col :title
+      col :author
+    end
+
+    User.auto_upgrade!
+    Book.auto_upgrade!
+
+    assert_equal ['id', 'name'], User.db_columns.sort
+    assert_equal ['author', 'id', 'title'], Book.db_columns.sort
+  end
 end
