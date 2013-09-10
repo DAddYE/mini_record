@@ -11,7 +11,7 @@ module MiniRecord
       end
 
       def table_definition
-        return superclass.table_definition unless superclass == ActiveRecord::Base
+        return superclass.table_definition unless (superclass == ActiveRecord::Base) || (superclass.respond_to?(:abstract_class?) && superclass.abstract_class?)
 
         @_table_definition ||= begin
                                  tb = ActiveRecord::ConnectionAdapters::TableDefinition.new(connection)
@@ -21,7 +21,7 @@ module MiniRecord
       end
 
       def indexes
-        return superclass.indexes unless superclass == ActiveRecord::Base
+        return superclass.indexes unless (superclass == ActiveRecord::Base) || (superclass.respond_to?(:abstract_class?) && superclass.abstract_class?)
 
         @_indexes ||= {}
       end
