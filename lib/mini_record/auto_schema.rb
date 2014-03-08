@@ -5,6 +5,7 @@ module MiniRecord
     end
 
     module ClassMethods
+
       def init_table_definition(connection)
         #connection.create_table(table_name) unless connection.table_exists?(table_name)
 
@@ -12,13 +13,14 @@ module MiniRecord
         when 1
           # Rails 3.2 and earlier
           ActiveRecord::ConnectionAdapters::TableDefinition.new(connection)
-        when 4
+        when 4, -5
           # Rails 4
           ActiveRecord::ConnectionAdapters::TableDefinition.new(connection.native_database_types, table_name, false, {})
         else
           raise ArgumentError,
             "Unsupported number of args for ActiveRecord::ConnectionAdapters::TableDefinition.new()"
         end
+
       end
 
       def schema_tables
@@ -72,14 +74,49 @@ module MiniRecord
         end
       end
 
+      def columns_hash
+        if mini_record_fake_columns
+          super.merge mini_record_fake_columns
+        else
+          super
+        end
+      end
+
+      def mini_record_columns
+        @@_mr_columns ||= {}
+        @@_mr_columns[table_name] ||= {}
+      end
+
+      def mini_record_fake_columns
+        @@_mr_fake_columns ||= {}
+        @@_mr_fake_columns[table_name] ||= {}
+      end
+
       def field(*args)
         return unless connection?
 
         options    = args.extract_options!
         type       = options.delete(:as) || options.delete(:type) || :string
         index      = options.delete(:index)
+        fake       = options.delete(:fake) || false
 
         args.each do |column_name|
+          # add it it the mini record columns for this table so we can access
+          # special fields like input_as, used by form builders
+          mini_record_columns[column_name] = options
+
+          if fake
+            # allow you to access the field on the instance object
+            attr_accessor column_name
+            # create a column that column_hashes will understand (a fake row)
+            fake_column = ActiveRecord::ConnectionAdapters::Column.new(
+              column_name.to_s, nil, type, true
+            )
+            # add it to the list of fake columns for this table
+            mini_record_fake_columns[column_name.to_s] = fake_column
+            # skip everything else as it's a fake column and don't want it in the db
+            next
+          end
 
           # Allow custom types like:
           #   t.column :type, "ENUM('EMPLOYEE','CLIENT','SUPERUSER','DEVELOPER')"
