@@ -270,7 +270,12 @@ module MiniRecord
               old_sql_type = get_sql_field_type(fields_in_db[field])
               new_sql_type = get_sql_field_type(fields[field])
 
-              if old_sql_type != new_sql_type
+              # Strip off the "(10,0)", from "decimal(10,0)" - we re-check this below.
+              # This is all a bit hacky but different versions of Rails act differently.
+              old_base_type = old_sql_type.sub(/\(.*/,'')
+              new_base_type = new_sql_type.sub(/\(.*/,'')
+
+              if old_sql_type != new_sql_type and old_base_type != new_base_type
                 logger.debug "[MiniRecord] Detected schema change for #{table_name}.#{field}#type " +
                              " from #{old_sql_type.inspect} to #{new_sql_type.inspect}" if logger
                 changed = true
@@ -287,9 +292,14 @@ module MiniRecord
               # Next, iterate through our extended attributes, looking for any differences
               # This catches stuff like :null, :precision, etc
               # Ignore junk attributes that different versions of Rails include
-              fields[field].each_pair do |att,value|
-                next unless [:name, :limit, :precision, :scale, :default, :null].include?(att)
+              [:name, :limit, :precision, :scale, :default, :null].each do |att|
+                value = fields[field][att]
                 value = true if att == :null && value.nil?
+
+                # Skip unspecified limit/precision/scale as DB will set them to defaults,
+                # and on subsequent runs, this will be erroneously detected as a change.
+                next if value.nil? and [:limit, :precision, :scale].include?(att)
+
                 old_value = fields_in_db[field].send(att)
                 if value != old_value
                   logger.debug "[MiniRecord] Detected schema change for #{table_name}.#{field}##{att} " +
