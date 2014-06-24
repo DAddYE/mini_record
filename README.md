@@ -139,10 +139,34 @@ records are happy and safe.
 
 It's exactly the same, but the column will be _really_ deleted without affect other columns.
 
+### Rename columns
+
+Simply add a `rename_col` declaration and mini_record will do a `connection.rename_column` in the next `auto_upgrade!` but only if the db has the old column and not the new column.
+You still need to have a `col` declaration for the new column name so subsequent `MyModel.auto_upgrade!` will not remove the column.  You are free to leave the `rename_col` declaration in place or you can remove it once the new column exists in the db.
+
+Moving from:
+```ruby
+class Vehicle < ActiveRecord::Base
+  col :color
+```
+To:
+```ruby
+class Vehicle < ActiveRecord::Base
+  rename_col :color, :new_name => :body_color
+  col :body_color
+end
+```
+Then perhaps later:
+```ruby
+class Vehicle < ActiveRecord::Base
+  rename_col :color, :new_name => :body_color
+  rename_col :body_color, :new_name => :chassis_color
+  col :chassis_color
+```
+
 ### Change columns
 
-It's not possible for us know when/what column you have renamed, but we can know if you changed the `type` so
-if you change `t.string :name` to `t.text :name` we are be able to perform an `ALTER TABLE`
+It's not possible for us know that the column name changed, if you modify the name in a `col` declaration, but we can know if you changed the `type` so if you change `t.string :name` to `t.text :name` we are be able to perform an `ALTER TABLE`
 
 ### Add/Remove indexes
 
