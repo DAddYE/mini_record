@@ -618,4 +618,35 @@ describe MiniRecord do
     assert_equal ['id', 'name'], User.db_columns.sort
     assert_equal ['author', 'id', 'title'], Book.db_columns.sort
   end
+
+  it 'should rename a column specified by rename_field' do
+    class Foo < ActiveRecord::Base
+      field :currency, :limit => 3
+    end
+    Foo.auto_upgrade!
+    assert_match /CREATE TABLE/, Foo.queries
+    
+    Foo.create :currency => 'USD'
+
+    Foo.rename_field :currency, :new_name => :currency_iso
+    Foo.field :currency_iso, :limit => 3
+
+    Foo.auto_upgrade!
+
+    case conn.adapter_name
+    when /sqlite/i
+      assert_match /CREATE TEMPORARY TABLE "altered_foos"/i, Foo.queries
+    when /mysql/i
+      assert_match /ALTER TABLE `foos` CHANGE `currency` `currency_iso`/i, Foo.queries
+    when /postgres/i
+      assert_match /ALTER TABLE "foos" RENAME COLUMN "currency" TO "currency_iso"/, Foo.queries
+    end
+
+    foo = Foo.first
+    assert_equal 'USD', foo.currency_iso
+
+    Foo.auto_upgrade!
+    assert_match '', Foo.queries
+
+  end
 end
