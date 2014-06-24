@@ -61,6 +61,10 @@ module MiniRecord
         end
       end
 
+      def rename_fields
+        @rename_fields ||= {}
+      end
+
       def fields
         table_definition.columns.inject({}) do |hash, column|
           hash[column.name] = column
@@ -74,6 +78,20 @@ module MiniRecord
           hash
         end
       end
+
+      def rename_field(*args)
+        return unless connection?
+
+        options    = args.extract_options!
+        new_name   = options.delete(:new_name)
+        old_name   = args.first
+        if old_name && new_name
+          rename_fields[old_name] = new_name
+        end
+      end
+      alias :rename_key       :rename_field
+      alias :rename_property  :rename_field
+      alias :rename_col       :rename_field
 
       def field(*args)
         return unless connection?
@@ -243,15 +261,26 @@ module MiniRecord
             field inheritance_column, :as => :string unless fields.key?(inheritance_column.to_s)
             index inheritance_column
           end
+          
+          # Rename fields
+          rename_fields.each do |old_name, new_name|
+            old_column = fields_in_db[old_name.to_s]
+            new_column = fields_in_db[new_name.to_s]
+            if old_column && !new_column
+              connection.rename_column(table_name, old_column.name, new_name)
+            end
+          end
 
           # Remove fields from db no longer in schema
-          (fields_in_db.keys - fields.keys & fields_in_db.keys).each do |field|
+          columns_to_delete = fields_in_db.keys - fields.keys & fields_in_db.keys
+          columns_to_delete.each do |field|
             column = fields_in_db[field]
             connection.remove_column table_name, column.name
           end
 
           # Add fields to db new to schema
-          (fields.keys - fields_in_db.keys).each do |field|
+          columns_to_add = fields.keys - fields_in_db.keys
+          columns_to_add.each do |field|
             column  = fields[field]
             options = {:limit => column.limit, :precision => column.precision, :scale => column.scale}
             options[:default] = column.default unless column.default.nil?
