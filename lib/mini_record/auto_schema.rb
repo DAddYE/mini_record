@@ -261,7 +261,7 @@ module MiniRecord
             field inheritance_column, :as => :string unless fields.key?(inheritance_column.to_s)
             index inheritance_column
           end
-          
+
           # Rename fields
           rename_fields.each do |old_name, new_name|
             old_column = fields_in_db[old_name.to_s]
@@ -292,23 +292,7 @@ module MiniRecord
           (fields.keys & fields_in_db.keys).each do |field|
             if field != primary_key #ActiveRecord::Base.get_primary_key(table_name)
               changed  = false  # flag
-              new_type = fields[field].type.to_sym
               new_attr = {}
-
-              # First, check if the field type changed
-              old_sql_type = get_sql_field_type(fields_in_db[field])
-              new_sql_type = get_sql_field_type(fields[field])
-
-              # Strip off the "(10,0)", from "decimal(10,0)" - we re-check this below.
-              # This is all a bit hacky but different versions of Rails act differently.
-              old_base_type = old_sql_type.sub(/\(.*/,'')
-              new_base_type = new_sql_type.sub(/\(.*/,'')
-
-              if old_sql_type != new_sql_type and old_base_type != new_base_type
-                logger.debug "[MiniRecord] Detected schema change for #{table_name}.#{field}#type " +
-                             " from #{old_sql_type.inspect} to #{new_sql_type.inspect}" if logger
-                changed = true
-              end
 
               # Special catch for precision/scale, since *both* must be specified together
               # Always include them in the attr struct, but they'll only get applied if changed = true
@@ -339,6 +323,7 @@ module MiniRecord
               end
 
               # Change the column if applicable
+              new_type = fields[field].type.to_sym
               connection.change_column table_name, field, new_type, new_attr if changed
             end
           end
