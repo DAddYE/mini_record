@@ -52,11 +52,9 @@ module MiniRecord
       end
 
       def get_sql_field_type(field)
-        if field.respond_to?(:sql_type)
-          # Rails 3.2 and earlier
+        if ActiveRecord::VERSION::MAJOR.to_i < 4
           field.sql_type.to_s.downcase
         else
-          # Rails 4
           connection.type_to_sql(field.type.to_sym, field.limit, field.precision, field.scale)
         end
       end
