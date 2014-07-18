@@ -6,7 +6,7 @@ Gem::Specification.new do |s|
   s.name        = "mini_record"
   s.version     = MiniRecord::VERSION
   s.authors     = ["Davide D'Agostino"]
-  s.email       = ["d.dagostino@lipsiasoft.com"]
+  s.email       = ["info@daddye.it"]
   s.homepage    = "https://github.com/DAddYE/mini_record"
   s.summary     = %q{MiniRecord is a micro gem that allow you to write schema inside your model as you can do in DataMapper.}
   s.description = %q{
