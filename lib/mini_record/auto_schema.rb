@@ -158,6 +158,7 @@ module MiniRecord
       end
 
       def clear_tables!
+        return unless MiniRecord.configuration.destructive == true 
         (connection.tables - schema_tables).each do |name|
           connection.drop_table(name)
           schema_tables.delete(name)
@@ -172,6 +173,7 @@ module MiniRecord
 
       # Remove foreign keys for indexes with :foreign=>false option
       def remove_foreign_keys
+        return unless MiniRecord.configuration.destructive == true 
         indexes.each do |name, options|
           if options[:foreign]==false
             foreign_key = foreign_keys.detect { |fk| fk.options[:column] == options[:column].to_s }
@@ -203,7 +205,7 @@ module MiniRecord
 
         if self == ActiveRecord::Base
           descendants.each(&:auto_upgrade!)
-          clear_tables! if MiniRecord.configuration.destructive == true 
+          clear_tables!
         else
           # If table doesn't exist, create it
           unless connection.tables.include?(table_name)
