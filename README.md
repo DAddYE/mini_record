@@ -25,6 +25,14 @@ Add to your `Gemfile`:
 gem 'mini_record'
 ```
 
+To optionally block any destructive actions on the database, create a file `config/initializers/mini_record.rb` and add:
+
+```ruby
+MiniRecord.configure do |config|
+  config.destructive = false
+end
+```
+
 That's all!
 
 ## Examples
