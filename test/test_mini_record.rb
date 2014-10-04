@@ -11,6 +11,7 @@ describe MiniRecord do
     ActiveSupport::DescendantsTracker.direct_descendants(ActiveRecord::Base).clear
     load File.expand_path('../models.rb', __FILE__)
     ActiveRecord::Base.auto_upgrade!
+    MiniRecord.reset_configuration!
   end
 
   it 'has #schema inside model' do
@@ -264,6 +265,31 @@ describe MiniRecord do
       refute_includes Foo.db_columns, 'image_id'
       assert_empty Foo.db_indexes
     end
+    
+    it 'doesnt remove a column and index when relation is removed and destructive is false' do
+      MiniRecord.configuration.destructive = false
+      class Foo < ActiveRecord::Base
+        key :name
+        belongs_to :image, :polymorphic => true
+      end
+      Foo.auto_upgrade!
+      assert_includes Foo.db_columns, 'name'
+      assert_includes Foo.db_columns, 'image_type'
+      assert_includes Foo.db_columns, 'image_id'
+      assert_includes Foo.db_indexes, 'index_foos_on_image_id_and_image_type'
+
+      Foo.class_eval do
+        reset_table_definition!
+        reflections.clear
+        indexes.clear
+        key :name
+      end
+      Foo.auto_upgrade!
+      assert_includes Foo.db_columns, 'name'
+      assert_includes Foo.db_columns, 'image_type'
+      assert_includes Foo.db_columns, 'image_id'
+      assert_includes Foo.db_indexes, 'index_foos_on_image_id_and_image_type'
+    end
 
     it 'creates columns and index based on polymorphic relation' do
       Attachment.create(:name => 'Avatar', :attachable_id => 1, :attachable_type => 'Post')
@@ -363,6 +389,32 @@ describe MiniRecord do
 
       assert_nil connection.foreign_keys(:books).detect {|fk| fk.options[:column] == 'publisher_id'}
     end
+    
+    it 'doesnt remove foreign key with :foreign option, when Foreigner gem used on mysql and destructive = false' do
+      MiniRecord.configuration.destructive = false
+      skip unless conn.adapter_name =~ /mysql/i
+
+      class Book < ActiveRecord::Base
+        belongs_to :publisher
+        index :publisher_id, :foreign => true
+      end
+      Book.auto_upgrade!
+
+      assert_includes Book.db_columns, 'publisher_id'
+      assert_includes Book.db_indexes, 'index_books_on_publisher_id'
+
+      assert connection.foreign_keys(:books).detect {|fk| fk.options[:column] == 'publisher_id'}
+
+      Object.send(:remove_const, :Book)
+      class Book < ActiveRecord::Base
+        belongs_to :publisher
+         index :publisher_id, :foreign => false
+      end
+      Book.auto_upgrade!
+
+      assert_includes Book.db_columns, 'publisher_id'
+      assert_includes Book.db_indexes, 'index_books_on_publisher_id'
+    end
 
     it 'add/remove named foreign key with :foreign option, when Foreigner gem used on mysql' do
       skip unless conn.adapter_name =~ /mysql/i
@@ -386,6 +438,33 @@ describe MiniRecord do
       Book.auto_upgrade!
 
       assert_nil connection.foreign_keys(:books).detect {|fk| fk.options[:column] == 'publisher_id'}
+      Object.send(:remove_const, :Book)
+    end
+    
+    it 'doesnt remove named foreign key with :foreign option, when Foreigner gem used on mysql and destructive = false' do
+      MiniRecord.configuration.destructive = false
+      skip unless conn.adapter_name =~ /mysql/i
+
+      class Book < ActiveRecord::Base
+        belongs_to :publisher
+        index :publisher_id, :name => 'my_super_publisher_id_fk', :foreign => true
+      end
+      Book.auto_upgrade!
+
+      assert_includes Book.db_columns, 'publisher_id'
+      assert_includes Book.db_indexes, 'my_super_publisher_id_fk'
+
+      assert connection.foreign_keys(:books).detect {|fk| fk.options[:column] == 'publisher_id'}
+
+      Object.send(:remove_const, :Book)
+      class Book < ActiveRecord::Base
+        belongs_to :publisher
+        index :publisher_id, :name => 'my_super_publisher_id_fk', :foreign => false
+      end
+      Book.auto_upgrade!
+
+      assert_includes Book.db_columns, 'publisher_id'
+      assert_includes Book.db_indexes, 'my_super_publisher_id_fk'
       Object.send(:remove_const, :Book)
     end
 
@@ -412,6 +491,32 @@ describe MiniRecord do
 
       assert_nil connection.foreign_keys(:books).detect {|fk| fk.options[:column] == 'second_publisher_id'}
     end
+    
+    it 'support :foreign option in the index with custom :foreign_key in the belong_to association and wont remove if destructive = false' do
+      MiniRecord.configuration.destructive = false
+      skip unless conn.adapter_name =~ /mysql/i
+
+      class Book < ActiveRecord::Base
+        belongs_to :second_publisher, :foreign_key => 'second_publisher_id', :class_name => 'Publisher'
+        index :second_publisher_id, :foreign => true
+      end
+      Book.auto_upgrade!
+
+      assert_includes Book.db_columns, 'second_publisher_id'
+      assert_includes Book.db_indexes, 'index_books_on_second_publisher_id'
+
+      assert connection.foreign_keys(:books).detect {|fk| fk.options[:column] == 'second_publisher_id'}
+
+      Object.send(:remove_const, :Book)
+      class Book < ActiveRecord::Base
+        belongs_to :second_publisher, :foreign_key => 'second_publisher_id', :class_name => 'Publisher'
+        index :second_publisher_id, :foreign => false
+      end
+      Book.auto_upgrade!
+
+      assert_includes Book.db_columns, 'second_publisher_id'
+      assert_includes Book.db_indexes, 'index_books_on_second_publisher_id'
+    end
 
   end
 
@@ -435,6 +540,19 @@ describe MiniRecord do
 
       ActiveRecord::Base.clear_tables!
       refute_includes Tool.connection.tables, 'purposes_tools'
+    end
+    
+    it 'keeps join table if has_and_belongs_to_many relation is deleted and destructive = false' do
+      MiniRecord.configuration.destructive = false
+      
+      tables = Tool.connection.tables
+      assert_includes tables, 'purposes_tools'
+      
+      Tool.schema_tables.delete('purposes_tools')
+      refute_includes ActiveRecord::Base.schema_tables, 'purposes_tools'
+
+      ActiveRecord::Base.clear_tables!
+      assert_includes Tool.connection.tables, 'purposes_tools'
     end
 
     it 'has_and_belongs_to_many with custom join_table and foreign keys' do
@@ -534,6 +652,47 @@ describe MiniRecord do
     refute_empty Foo.queries
     assert_equal 255, Foo.db_fields[:string].limit
   end
+  
+  it 'should not change #limit if destructive = false' do
+    MiniRecord.configuration.destructive = false
+    class Foo < ActiveRecord::Base
+      key :number, :as => :integer
+      key :string, :limit => 100
+    end
+    Foo.auto_upgrade!
+    assert_match /CREATE TABLE/, Foo.queries
+
+    Foo.auto_upgrade!
+    refute_match /alter/i, Foo.queries
+
+    # According to this:
+    # https://github.com/rails/rails/blob/master/activerecord/lib/active_record/connection_adapters/abstract_mysql_adapter.rb#L476-487
+    Foo.key :number, :as => :integer, :limit => 4
+    Foo.auto_upgrade!
+    case conn.adapter_name
+    when /sqlite/i
+      # In sqlite there is a difference between limit: 4 and limit: 11
+      assert_match Foo.queries, "" 
+      assert_equal nil, Foo.db_fields[:number].limit
+      assert_equal 4, Foo.schema_fields[:number].limit
+    when /mysql/i
+      # In mysql according to this: http://goo.gl/bjZE7 limit: 4 is same of limit:11
+      assert_empty Foo.queries
+      assert_equal nil, Foo.db_fields[:number].limit
+      assert_equal 4, Foo.schema_fields[:number].limit
+    when /postgres/i
+      # In postgres limit: 4 will be translated to nil
+      assert_match Foo.queries, ""
+      assert_equal nil, Foo.db_fields[:number].limit
+      assert_equal 4, Foo.schema_fields[:number].limit
+    end
+
+    # Change limit to string
+    Foo.key :string, :limit => 255
+    Foo.auto_upgrade!
+    assert_empty Foo.queries
+    assert_equal 100, Foo.db_fields[:string].limit
+  end
 
   it 'should change #null' do
     class Foo < ActiveRecord::Base
@@ -558,6 +717,31 @@ describe MiniRecord do
     assert_match /alter/i, Foo.queries
     refute Foo.db_fields[:string].null
   end
+  
+  it 'should not change #null if destructive = false' do
+    MiniRecord.configuration.destructive = false
+    class Foo < ActiveRecord::Base
+      key :string
+    end
+    Foo.auto_upgrade!
+    assert Foo.db_fields[:string].null
+
+    # Same as above
+    Foo.key :string, :null => true
+    Foo.auto_upgrade!
+    refute_match /alter/i, Foo.queries
+    assert Foo.db_fields[:string].null
+
+    Foo.key :string, :null => nil
+    Foo.auto_upgrade!
+    refute_match /alter/i, Foo.queries
+    assert Foo.db_fields[:string].null
+
+    Foo.key :string, :null => false
+    Foo.auto_upgrade!
+    assert_match "", Foo.queries
+    assert Foo.db_fields[:string].null
+  end
 
   it 'should change #scale #precision' do
     class Foo < ActiveRecord::Base
@@ -577,6 +761,27 @@ describe MiniRecord do
     assert_equal 4, Foo.db_fields[:currency].precision
     assert_equal 2, Foo.db_fields[:currency].scale
     assert_equal 4, Foo.db_fields[:currency].limit
+  end
+  
+  it 'should not change #scale #precision if destructive = false' do
+    MiniRecord.configuration.destructive = false
+    class Foo < ActiveRecord::Base
+      field :currency, :as => :decimal, :precision => 8, :scale => 2
+    end
+    Foo.auto_upgrade!
+    assert_equal 8, Foo.db_fields[:currency].precision
+    assert_equal 2, Foo.db_fields[:currency].scale
+    assert_equal 8, Foo.db_fields[:currency].limit
+
+    Foo.auto_upgrade!
+    refute_match /alter/i, Foo.queries
+
+    Foo.field :currency, :as => :decimal, :precision => 4, :scale => 2, :limit => 5
+    Foo.auto_upgrade!
+    assert_match "", Foo.queries
+    assert_equal 8, Foo.db_fields[:currency].precision
+    assert_equal 2, Foo.db_fields[:currency].scale
+    assert_equal 8, Foo.db_fields[:currency].limit
   end
 
   it 'should ignore abstract classes' do
@@ -644,6 +849,39 @@ describe MiniRecord do
 
     foo = Foo.first
     assert_equal 'USD', foo.currency_iso
+
+    Foo.auto_upgrade!
+    assert_match '', Foo.queries
+
+  end
+  
+  it 'should note rename a column specified by rename_field if destructive = false' do
+    MiniRecord.configuration.destructive = false
+    class Foo < ActiveRecord::Base
+      field :currency, :limit => 3
+    end
+    Foo.auto_upgrade!
+    assert_match /CREATE TABLE/, Foo.queries
+    
+    Foo.create :currency => 'USD'
+
+    Foo.rename_field :currency, :new_name => :currency_iso
+    Foo.field :currency_iso, :limit => 3
+
+    Foo.auto_upgrade!
+
+    case conn.adapter_name
+    when /sqlite/i
+      assert_match "", Foo.queries
+    when /mysql/i
+      assert_match "", Foo.queries
+    when /postgres/i
+      assert_match "", Foo.queries
+    end
+
+    cols = conn.columns('foos').map(&:name)
+    assert_includes cols, "currency_iso"
+    assert_includes cols, "currency"
 
     Foo.auto_upgrade!
     assert_match '', Foo.queries
