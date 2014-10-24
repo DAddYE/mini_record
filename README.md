@@ -260,6 +260,19 @@ class Fox < ActiveRecord::Base
 end
 ```
 
+### Suppress default indexes for associations
+
+If you do not need the default index for a `belongs_to` or `has_and_belongs_to_many` relationship, such as if you are using a composite index instead, you can suppress it from being created (or remove it) using `suppress_index` on the association:
+
+```ruby
+class PhoneNumber < ActiveRecord::Base
+  field :position
+  belongs_to :person
+  suppress_index :person
+  add_index [:person_id, :position]
+end
+```
+
 ## Contributors
 
 A special thanks to all who have contributed in this project:

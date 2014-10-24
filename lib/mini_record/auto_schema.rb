@@ -44,6 +44,12 @@ module MiniRecord
         @_indexes ||= {}
       end
 
+      def suppressed_indexes
+        return superclass.suppressed_indexes unless (superclass == ActiveRecord::Base) || (superclass.respond_to?(:abstract_class?) && superclass.abstract_class?)
+
+        @_suppressed_indexes ||= {}
+      end
+
       def indexes_in_db
         connection.indexes(table_name).inject({}) do |hash, index|
           hash[index.name] = index
@@ -150,6 +156,12 @@ module MiniRecord
       end
       alias :index :add_index
 
+      def suppress_index(*associations)
+        associations.each do |association|
+          suppressed_indexes[association] = true
+        end
+      end
+
       def connection?
         !!connection
       rescue Exception => e
@@ -229,9 +241,9 @@ module MiniRecord
                 field foreign_key, :as => :integer unless fields.key?(foreign_key.to_s)
                 if association.options[:polymorphic]
                   field type_key, :as => :string unless fields.key?(type_key.to_s)
-                  index [foreign_key, type_key]
+                  index [foreign_key, type_key] unless suppressed_indexes[association.name]
                 else
-                  index foreign_key
+                  index foreign_key unless suppressed_indexes[association.name]
                 end
               when :has_and_belongs_to_many
                 table = if name = association.options[:join_table]
@@ -248,7 +260,7 @@ module MiniRecord
                   end
                   index_name = connection.index_name(table, :column => [foreign_key, association_foreign_key])
                   index_name = index_name[0...connection.index_name_length] if index_name.length > connection.index_name_length
-                  connection.add_index table, [foreign_key, association_foreign_key], :name => index_name, :unique => true
+                  connection.add_index table, [foreign_key, association_foreign_key], :name => index_name, :unique => true unless suppressed_indexes[association.name]
                 end
                 # Add join table to our schema tables
                 schema_tables << table unless schema_tables.include?(table)
