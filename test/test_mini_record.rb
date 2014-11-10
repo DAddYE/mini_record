@@ -887,4 +887,12 @@ describe MiniRecord do
     assert_match '', Foo.queries
 
   end
+
+  it 'accepts create_table options' do
+    class Foo < ActiveRecord::Base
+      create_table options: "extra options"
+    end
+    Foo.auto_upgrade! rescue nil # eat the exception from invalid options
+    assert_match /CREATE TABLE.* extra options\Z/, Foo.queries
+  end
 end
