@@ -260,6 +260,17 @@ class Fox < ActiveRecord::Base
 end
 ```
 
+### Passing options to Create Table
+
+If you need to pass particular options to your `CREATE TABLE` statement, you can do so with `create_table` in the Model:
+
+```ruby
+class Fox < ActiveRecord::Base
+  create_table :options => 'ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci'
+  field :foo
+end
+```
+
 ## Contributors
 
 A special thanks to all who have contributed in this project:
