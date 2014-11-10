@@ -128,9 +128,41 @@ describe MiniRecord do
       index :customer_id, :unique => true, :name => 'by_customer'
       belongs_to :customer
     end
+    # Run auto_upgrade! once to create table and index.
     Foo.auto_upgrade!
     assert_equal 1, Foo.db_indexes.size
     assert_includes Foo.db_indexes, 'by_customer'
+    # Run auto_upgrade! again and ensure no statements issued.
+    Foo.auto_upgrade!
+    assert_empty Foo.queries
+  end
+
+  it 'does not add already defined composite indexes' do
+    class Foo < ActiveRecord::Base
+      belongs_to :region
+      belongs_to :customer
+      add_index [:region_id, :customer_id], :unique => true, :name => 'by_region_and_customer'
+    end
+    # Run auto_upgrade! once to create table and index.
+    Foo.auto_upgrade!
+    assert_equal 3, Foo.db_indexes.size
+    assert_includes Foo.db_indexes, 'by_region_and_customer'
+    # Run auto_upgrade! again and ensure no statements issued.
+    Foo.auto_upgrade!
+    assert_empty Foo.queries
+  end
+
+  it 'supports indexes with symbols for names' do
+    class Foo < ActiveRecord::Base
+      col :some_field, :index => {:name => :idx_for_some_field}
+    end
+    # Run auto_upgrade! once to create table and index.
+    Foo.auto_upgrade!
+    assert_equal 1, Foo.db_indexes.size
+    assert_includes Foo.db_indexes, 'idx_for_some_field'
+    # Run auto_upgrade! again and ensure no statements issued.
+    Foo.auto_upgrade!
+    assert_empty Foo.queries
   end
 
   it 'works with STI' do

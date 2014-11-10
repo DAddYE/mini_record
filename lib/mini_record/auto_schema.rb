@@ -324,7 +324,7 @@ module MiniRecord
             remove_foreign_keys if connection.respond_to?(:foreign_keys)
 
             # Remove old index
-            index_names = indexes.collect{|name,opts| opts[:name] || name }
+            index_names = indexes.collect{ |name, opts| (opts[:name] || name).to_s }
             (indexes_in_db.keys - index_names).each do |name|
               connection.remove_index(table_name, :name => name)
             end
@@ -344,7 +344,7 @@ module MiniRecord
           # Add indexes
           indexes.each do |name, options|
             options = options.dup
-            index_name = options[:name] || name
+            index_name = (options[:name] || name).to_s
             unless connection.indexes(table_name).detect { |i| i.name == index_name }
               connection.add_index(table_name, options.delete(:column), options)
             end
