@@ -557,6 +557,24 @@ describe MiniRecord do
       assert_includes Book.db_indexes, 'index_books_on_second_publisher_id'
     end
 
+    it "does not add suppressed index" do
+      class Foo < ActiveRecord::Base
+        belongs_to :customer
+        suppress_index :customer
+      end
+      Foo.auto_upgrade!
+      assert_equal 0, Foo.db_indexes.size
+    end
+
+    it "does not add suppressed index from polymorphic relation" do
+      class Foo < ActiveRecord::Base
+        belongs_to :customer, :polymorphic => true
+        suppress_index :customer
+      end
+      Foo.auto_upgrade!
+      assert_equal 0, Foo.db_indexes.size
+    end
+
   end
 
   describe 'relation #habtm' do
@@ -617,6 +635,16 @@ describe MiniRecord do
       index_name = 'index_long_people_on_custom_long_long_long_long_id_and_customer_super_long_very_long_trust_me_id'[0...conn.index_name_length]
       assert_includes conn.tables, 'people'
       assert_includes conn.indexes(:long_people).map(&:name), index_name
+    end
+
+    it 'creates a join table without an index when suppressed for has_and_belongs_to_many relations' do
+      class Foo < ActiveRecord::Base
+        has_and_belongs_to_many :bars
+        suppress_index :bars
+      end
+      Foo.auto_upgrade!
+      assert_includes conn.tables, 'bars_foos'
+      assert_equal 0, conn.indexes(:bars_foos).size
     end
 
     it 'adds unique index' do
