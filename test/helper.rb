@@ -37,7 +37,13 @@ class ActiveRecord::Base
       ActiveRecord::Base.logs.string.gsub(/\e\[[\d;]+m/, '').lines.reject { |l| !pragma && l =~ /pragma/i }.join("\n")
     end
 
-    def auto_upgrade!
+    def auto_upgrade!(*args)
+      ActiveRecord::Base.logs = StringIO.new
+      ActiveRecord::Base.logger = ActiveSupport::BufferedLogger.new(ActiveRecord::Base.logs)
+      silence_stream(STDERR) { super }
+    end
+
+    def auto_upgrade_dry
       ActiveRecord::Base.logs = StringIO.new
       ActiveRecord::Base.logger = ActiveSupport::BufferedLogger.new(ActiveRecord::Base.logs)
       silence_stream(STDERR) { super }

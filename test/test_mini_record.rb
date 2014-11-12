@@ -2,13 +2,20 @@ require File.expand_path('../helper.rb', __FILE__)
 
 describe MiniRecord do
 
-  before do
-    ActiveRecord::Base.clear_reloadable_connections!
-    ActiveRecord::Base.clear_cache!
-    ActiveRecord::Base.clear_active_connections!
-    conn.tables.each { |table| silence_stream(STDERR) { conn.execute "DROP TABLE IF EXISTS #{table}" } }
+  def clear_active_record!(options = {})
+    unless options[:keep_tables]
+      ActiveRecord::Base.clear_reloadable_connections!
+      ActiveRecord::Base.clear_cache!
+      ActiveRecord::Base.clear_active_connections!
+      conn.tables.each { |table| silence_stream(STDERR) { conn.execute "DROP TABLE IF EXISTS #{table}" } }
+    end
+
     ActiveRecord::Base.descendants.each { |klass| Object.send(:remove_const, klass.to_s) if Object.const_defined?(klass.to_s) }
     ActiveSupport::DescendantsTracker.direct_descendants(ActiveRecord::Base).clear
+  end
+
+  before do
+    clear_active_record!
     load File.expand_path('../models.rb', __FILE__)
     ActiveRecord::Base.auto_upgrade!
     MiniRecord.reset_configuration!
@@ -128,9 +135,41 @@ describe MiniRecord do
       index :customer_id, :unique => true, :name => 'by_customer'
       belongs_to :customer
     end
+    # Run auto_upgrade! once to create table and index.
     Foo.auto_upgrade!
     assert_equal 1, Foo.db_indexes.size
     assert_includes Foo.db_indexes, 'by_customer'
+    # Run auto_upgrade! again and ensure no statements issued.
+    Foo.auto_upgrade!
+    assert_empty Foo.queries
+  end
+
+  it 'does not add already defined composite indexes' do
+    class Foo < ActiveRecord::Base
+      belongs_to :region
+      belongs_to :customer
+      add_index [:region_id, :customer_id], :unique => true, :name => 'by_region_and_customer'
+    end
+    # Run auto_upgrade! once to create table and index.
+    Foo.auto_upgrade!
+    assert_equal 3, Foo.db_indexes.size
+    assert_includes Foo.db_indexes, 'by_region_and_customer'
+    # Run auto_upgrade! again and ensure no statements issued.
+    Foo.auto_upgrade!
+    assert_empty Foo.queries
+  end
+
+  it 'supports indexes with symbols for names' do
+    class Foo < ActiveRecord::Base
+      col :some_field, :index => {:name => :idx_for_some_field}
+    end
+    # Run auto_upgrade! once to create table and index.
+    Foo.auto_upgrade!
+    assert_equal 1, Foo.db_indexes.size
+    assert_includes Foo.db_indexes, 'idx_for_some_field'
+    # Run auto_upgrade! again and ensure no statements issued.
+    Foo.auto_upgrade!
+    assert_empty Foo.queries
   end
 
   it 'works with STI' do
@@ -922,5 +961,31 @@ describe MiniRecord do
     end
     Foo.auto_upgrade! rescue nil # eat the exception from invalid options
     assert_match /CREATE TABLE.* extra options\Z/, Foo.queries
+  end
+
+  it 'can do a dry run' do
+    class Foo < ActiveRecord::Base
+    end
+
+    ActiveRecord::Base.auto_upgrade_dry
+    refute_match /\bcreate\b/i, Foo.queries
+    refute_match /\balter\b/i, Foo.queries
+
+    ActiveRecord::Base.auto_upgrade!
+    assert_match /\bcreate\b/i, Foo.queries
+    refute_match /\balter\b/i, Foo.queries
+
+    clear_active_record!(:keep_tables => true)
+    class Foo < ActiveRecord::Base
+      property :new_field, :index => true
+    end
+
+    ActiveRecord::Base.auto_upgrade_dry
+    refute_match /\bcreate\b/i, Foo.queries
+    refute_match /\balter\b/i, Foo.queries
+
+    ActiveRecord::Base.auto_upgrade!
+    assert_match /\bcreate\b/i, Foo.queries
+    assert_match /\balter\b/i, Foo.queries
   end
 end
