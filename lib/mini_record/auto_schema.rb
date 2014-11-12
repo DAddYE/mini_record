@@ -65,6 +65,10 @@ module MiniRecord
         end
       end
 
+      def create_table_options
+        @create_table_options ||= []
+      end
+
       def rename_fields
         @rename_fields ||= {}
       end
@@ -149,6 +153,10 @@ module MiniRecord
         table_definition
       end
 
+      def create_table(*options)
+        @create_table_options = options
+      end
+
       def add_index(column_name, options={})
         index_name = connection.index_name(table_name, :column => column_name)
         indexes[index_name] = options.merge(:column => column_name) unless indexes.key?(index_name)
@@ -221,10 +229,9 @@ module MiniRecord
         else
           # If table doesn't exist, create it
           unless connection.tables.include?(table_name)
-            # TODO: create_table options
             class << connection; attr_accessor :table_definition; end unless connection.respond_to?(:table_definition=)
             connection.table_definition = table_definition
-            connection.create_table(table_name)
+            connection.create_table(table_name, *create_table_options)
             connection.table_definition = init_table_definition(connection)
           end
 
