@@ -180,7 +180,7 @@ module MiniRecord
       def clear_tables!(dry_run = false)
         return unless MiniRecord.configuration.destructive == true 
         (connection.tables - schema_tables).each do |name|
-          logger.debug "[MiniRecord] Dropping table #{name}"
+          logger.debug "[MiniRecord] Dropping table #{name}" if logger
           unless dry_run
             connection.drop_table(name)
             schema_tables.delete(name)
@@ -201,7 +201,7 @@ module MiniRecord
           if options[:foreign]==false
             foreign_key = foreign_keys.detect { |fk| fk.options[:column] == options[:column].to_s }
             if foreign_key
-              logger.debug "[MiniRecord] Removing Foreign Key #{foreign_key.options[:name]} on table #{table_name}"
+              logger.debug "[MiniRecord] Removing Foreign Key #{foreign_key.options[:name]} on table #{table_name}" if logger
               connection.remove_foreign_key(table_name, :name => foreign_key.options[:name]) unless dry_run
               foreign_keys.delete(foreign_key)
             end
@@ -216,7 +216,7 @@ module MiniRecord
             column = options[:column].to_s
             unless foreign_keys.detect { |fk| fk[:options][:column] == column }
               to_table = reflect_on_all_associations.detect { |a| a.foreign_key.to_s==column }.table_name
-              logger.debug "[MiniRecord] Adding Foreign Key on #{table_name} to #{to_table}"
+              logger.debug "[MiniRecord] Adding Foreign Key on #{table_name} to #{to_table}" if logger
               connection.add_foreign_key(table_name, to_table, options) unless dry_run
               foreign_keys << { :options=> { :column=>column } }
             end
@@ -240,7 +240,7 @@ module MiniRecord
           # If table doesn't exist, create it
           unless connection.tables.include?(table_name)
             class << connection; attr_accessor :table_definition; end unless connection.respond_to?(:table_definition=)
-            logger.debug "[MiniRecord] Creating Table #{table_name}"
+            logger.debug "[MiniRecord] Creating Table #{table_name}" if logger
             unless dry_run
               connection.table_definition = table_definition
               connection.create_table(table_name, *create_table_options)
@@ -274,7 +274,7 @@ module MiniRecord
                 unless connection.tables.include?(table.to_s)
                   foreign_key             = association.options[:foreign_key] || association.foreign_key
                   association_foreign_key = association.options[:association_foreign_key] || association.association_foreign_key
-                  logger.debug "[MiniRecord] Creating Join Table #{table} with keys #{foreign_key} and #{association_foreign_key}"
+                  logger.debug "[MiniRecord] Creating Join Table #{table} with keys #{foreign_key} and #{association_foreign_key}" if logger
                   unless dry_run
                     connection.create_table(table, :id => false) do |t|
                       t.integer foreign_key
@@ -283,7 +283,7 @@ module MiniRecord
                   end
                   index_name = connection.index_name(table, :column => [foreign_key, association_foreign_key])
                   index_name = index_name[0...connection.index_name_length] if index_name.length > connection.index_name_length
-                  logger.debug "[MiniRecord] Creating Join Table Index #{index_name} (#{foreign_key}, #{association_foreign_key}) on #{table}"
+                  logger.debug "[MiniRecord] Creating Join Table Index #{index_name} (#{foreign_key}, #{association_foreign_key}) on #{table}" if logger
                   connection.add_index table, [foreign_key, association_foreign_key], :name => index_name, :unique => true unless dry_run or suppressed_indexes[association.name]
                 end
                 # Add join table to our schema tables
@@ -306,7 +306,7 @@ module MiniRecord
               old_column = fields_in_db[old_name.to_s]
               new_column = fields_in_db[new_name.to_s]
               if old_column && !new_column
-                logger.debug "[MiniRecord] Renaming column #{table_name}.#{old_column.name} to #{new_name}"
+                logger.debug "[MiniRecord] Renaming column #{table_name}.#{old_column.name} to #{new_name}" if logger
                 connection.rename_column(table_name, old_column.name, new_name) unless dry_run
               end
             end
@@ -315,7 +315,7 @@ module MiniRecord
             columns_to_delete = fields_in_db.keys - fields.keys & fields_in_db.keys
             columns_to_delete.each do |field|
               column = fields_in_db[field]
-              logger.debug "[MiniRecord] Removing column #{table_name}.#{column.name}"
+              logger.debug "[MiniRecord] Removing column #{table_name}.#{column.name}" if logger
               connection.remove_column table_name, column.name unless dry_run
             end
             
@@ -356,7 +356,7 @@ module MiniRecord
                 # Change the column if applicable
                 new_type = fields[field].type.to_sym
                 if changed
-                  logger.debug "[MiniRecord] Changing column #{table_name}.#{field} to new type #{new_type}"
+                  logger.debug "[MiniRecord] Changing column #{table_name}.#{field} to new type #{new_type}" if logger
                   connection.change_column table_name, field, new_type, new_attr unless dry_run
                 end
               end
@@ -367,7 +367,7 @@ module MiniRecord
             # Remove old index
             index_names = indexes.collect{ |name, opts| (opts[:name] || name).to_s }
             (indexes_in_db.keys - index_names).each do |name|
-              logger.debug "[MiniRecord] Removing index #{name} on #{table_name}"
+              logger.debug "[MiniRecord] Removing index #{name} on #{table_name}" if logger
               connection.remove_index(table_name, :name => name) unless dry_run
             end
             
@@ -381,7 +381,7 @@ module MiniRecord
               options = {:limit => column.limit, :precision => column.precision, :scale => column.scale}
               options[:default] = column.default unless column.default.nil?
               options[:null]    = column.null    unless column.null.nil?
-              logger.debug "[MiniRecord] Adding column #{table_name}.#{column.name}"
+              logger.debug "[MiniRecord] Adding column #{table_name}.#{column.name}" if logger
               connection.add_column table_name, column.name, column.type.to_sym, options unless dry_run
             end
           end
@@ -391,7 +391,7 @@ module MiniRecord
             options = options.dup
             index_name = (options[:name] || name).to_s
             unless connection.indexes(table_name).detect { |i| i.name == index_name }
-              logger.debug "[MiniRecord] Adding index #{index_name} #{options[:column].inspect} on #{table_name}"
+              logger.debug "[MiniRecord] Adding index #{index_name} #{options[:column].inspect} on #{table_name}" if logger
               connection.add_index(table_name, options.delete(:column), options) unless dry_run
             end
           end
