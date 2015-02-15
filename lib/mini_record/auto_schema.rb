@@ -3,7 +3,7 @@ module MiniRecord
     def self.included(base)
       base.extend(ClassMethods)
     end
-    
+
     module ClassMethods
       def init_table_definition(connection)
         #connection.create_table(table_name) unless connection.table_exists?(table_name)
@@ -23,7 +23,7 @@ module MiniRecord
             "Unsupported number of args for ActiveRecord::ConnectionAdapters::TableDefinition.new()"
         end
       end
-      
+
       def schema_tables
         @@_schema_tables ||= []
       end
@@ -139,7 +139,7 @@ module MiniRecord
       alias :col       :field
 
       def timestamps
-        field :created_at, :updated_at, :as => :datetime, :null => false
+        field :created_at, :updated_at, :as => :datetime
       end
 
       def reset_table_definition!
@@ -178,7 +178,7 @@ module MiniRecord
       end
 
       def clear_tables!(dry_run = false)
-        return unless MiniRecord.configuration.destructive == true 
+        return unless MiniRecord.configuration.destructive == true
         (connection.tables - schema_tables).each do |name|
           logger.debug "[MiniRecord] Dropping table #{name}" if logger
           unless dry_run
@@ -196,7 +196,7 @@ module MiniRecord
 
       # Remove foreign keys for indexes with :foreign=>false option
       def remove_foreign_keys(dry_run)
-        return unless MiniRecord.configuration.destructive == true 
+        return unless MiniRecord.configuration.destructive == true
         indexes.each do |name, options|
           if options[:foreign]==false
             foreign_key = foreign_keys.detect { |fk| fk.options[:column] == options[:column].to_s }
@@ -300,7 +300,7 @@ module MiniRecord
 
           # Group Destructive Actions
           if MiniRecord.configuration.destructive == true and connection.tables.include?(table_name)
-            
+
             # Rename fields
             rename_fields.each do |old_name, new_name|
               old_column = fields_in_db[old_name.to_s]
@@ -310,7 +310,7 @@ module MiniRecord
                 connection.rename_column(table_name, old_column.name, new_name) unless dry_run
               end
             end
-            
+
             # Remove fields from db no longer in schema
             columns_to_delete = fields_in_db.keys - fields.keys & fields_in_db.keys
             columns_to_delete.each do |field|
@@ -318,7 +318,7 @@ module MiniRecord
               logger.debug "[MiniRecord] Removing column #{table_name}.#{column.name}" if logger
               connection.remove_column table_name, column.name unless dry_run
             end
-            
+
             # Change attributes of existent columns
             (fields.keys & fields_in_db.keys).each do |field|
               if field != primary_key #ActiveRecord::Base.get_primary_key(table_name)
@@ -345,7 +345,7 @@ module MiniRecord
                   next if value.nil? and [:limit, :precision, :scale].include?(att)
 
                   old_value = fields_in_db[field].send(att)
-                  if value != old_value
+                  if value.to_s != old_value.to_s
                     logger.debug "[MiniRecord] Detected schema change for #{table_name}.#{field}##{att} " +
                                  "from #{old_value.inspect} to #{value.inspect}" if logger
                     new_attr[att] = value
@@ -361,7 +361,7 @@ module MiniRecord
                 end
               end
             end
-            
+
             remove_foreign_keys(dry_run) if connection.respond_to?(:foreign_keys)
 
             # Remove old index
@@ -370,7 +370,7 @@ module MiniRecord
               logger.debug "[MiniRecord] Removing index #{name} on #{table_name}" if logger
               connection.remove_index(table_name, :name => name) unless dry_run
             end
-            
+
           end
 
           if connection.tables.include?(table_name)
