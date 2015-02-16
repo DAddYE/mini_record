@@ -3,7 +3,7 @@ module MiniRecord
     def self.included(base)
       base.extend(ClassMethods)
     end
-    
+
     module ClassMethods
       def init_table_definition(connection)
         #connection.create_table(table_name) unless connection.table_exists?(table_name)
@@ -23,7 +23,7 @@ module MiniRecord
             "Unsupported number of args for ActiveRecord::ConnectionAdapters::TableDefinition.new()"
         end
       end
-      
+
       def schema_tables
         @@_schema_tables ||= []
       end
@@ -139,7 +139,7 @@ module MiniRecord
       alias :col       :field
 
       def timestamps
-        field :created_at, :updated_at, :as => :datetime, :null => false
+        field :created_at, :updated_at, :as => :datetime
       end
 
       def reset_table_definition!
@@ -178,7 +178,7 @@ module MiniRecord
       end
 
       def clear_tables!(dry_run = false)
-        return unless MiniRecord.configuration.destructive == true 
+        return unless MiniRecord.configuration.destructive == true
         (connection.tables - schema_tables).each do |name|
           logger.debug "[MiniRecord] Dropping table #{name}" if logger
           unless dry_run
@@ -196,7 +196,7 @@ module MiniRecord
 
       # Remove foreign keys for indexes with :foreign=>false option
       def remove_foreign_keys(dry_run)
-        return unless MiniRecord.configuration.destructive == true 
+        return unless MiniRecord.configuration.destructive == true
         indexes.each do |name, options|
           if options[:foreign]==false
             foreign_key = foreign_keys.detect { |fk| fk.options[:column] == options[:column].to_s }
@@ -222,6 +222,51 @@ module MiniRecord
             end
           end
         end
+      end
+
+      # Helper to determine if/how a field will change
+      def field_attr_changes(field_name)
+        field    = field_name.to_s
+        changed  = false  # flag
+        new_attr = {}
+
+        # Next, iterate through our extended attributes, looking for any differences
+        # This catches stuff like :null, :precision, etc
+        # Ignore junk attributes that different versions of Rails include
+        [:name, :limit, :precision, :scale, :default, :null].each do |att|
+          value = fields[field][att]
+          value = true if att == :null && value.nil?
+
+          # Skip unspecified limit/precision/scale as DB will set them to defaults,
+          # and on subsequent runs, this will be erroneously detected as a change.
+          next if value.nil? and [:limit, :precision, :scale].include?(att)
+
+          old_value = fields_in_db[field].send(att)
+          # puts "#{field_name}[#{att}] = #{value.inspect} vs #{old_value.inspect}"
+
+          attr_changed = false
+          if att == :default
+            # Rails 4.2 changed behavior to pass DB values directly through, so we must re-map
+            if value.to_s =~ /^(false|f|0)$/i
+              attr_changed = true if old_value.to_s !~ /^(false|f|0)$/i
+            elsif value.to_s =~ /^(true|t|1)$/i
+              attr_changed = true if old_value.to_s !~ /^(true|t|1)$/i
+            elsif value.to_s != old_value.to_s
+              attr_changed = true
+            end
+          elsif value != old_value
+            attr_changed = true
+          end
+
+          if attr_changed
+            logger.debug "[MiniRecord] Detected schema change for #{table_name}.#{field}##{att} " +
+                         "from #{old_value.inspect} to #{value.inspect}" if logger
+            new_attr[att] = value
+            changed ||= attr_changed
+          end
+        end
+
+        [new_attr, changed]
       end
 
       # dry-run
@@ -300,7 +345,7 @@ module MiniRecord
 
           # Group Destructive Actions
           if MiniRecord.configuration.destructive == true and connection.tables.include?(table_name)
-            
+
             # Rename fields
             rename_fields.each do |old_name, new_name|
               old_column = fields_in_db[old_name.to_s]
@@ -310,7 +355,7 @@ module MiniRecord
                 connection.rename_column(table_name, old_column.name, new_name) unless dry_run
               end
             end
-            
+
             # Remove fields from db no longer in schema
             columns_to_delete = fields_in_db.keys - fields.keys & fields_in_db.keys
             columns_to_delete.each do |field|
@@ -318,40 +363,11 @@ module MiniRecord
               logger.debug "[MiniRecord] Removing column #{table_name}.#{column.name}" if logger
               connection.remove_column table_name, column.name unless dry_run
             end
-            
+
             # Change attributes of existent columns
             (fields.keys & fields_in_db.keys).each do |field|
               if field != primary_key #ActiveRecord::Base.get_primary_key(table_name)
-                changed  = false  # flag
-                new_attr = {}
-
-                # Special catch for precision/scale, since *both* must be specified together
-                # Always include them in the attr struct, but they'll only get applied if changed = true
-                new_attr[:precision] = fields[field][:precision]
-                new_attr[:scale]     = fields[field][:scale]
-
-                # If we have precision this is also the limit
-                fields[field][:limit] ||= fields[field][:precision]
-
-                # Next, iterate through our extended attributes, looking for any differences
-                # This catches stuff like :null, :precision, etc
-                # Ignore junk attributes that different versions of Rails include
-                [:name, :limit, :precision, :scale, :default, :null].each do |att|
-                  value = fields[field][att]
-                  value = true if att == :null && value.nil?
-
-                  # Skip unspecified limit/precision/scale as DB will set them to defaults,
-                  # and on subsequent runs, this will be erroneously detected as a change.
-                  next if value.nil? and [:limit, :precision, :scale].include?(att)
-
-                  old_value = fields_in_db[field].send(att)
-                  if value != old_value
-                    logger.debug "[MiniRecord] Detected schema change for #{table_name}.#{field}##{att} " +
-                                 "from #{old_value.inspect} to #{value.inspect}" if logger
-                    new_attr[att] = value
-                    changed = true
-                  end
-                end
+                new_attr, changed = field_attr_changes(field)
 
                 # Change the column if applicable
                 new_type = fields[field].type.to_sym
@@ -361,7 +377,7 @@ module MiniRecord
                 end
               end
             end
-            
+
             remove_foreign_keys(dry_run) if connection.respond_to?(:foreign_keys)
 
             # Remove old index
@@ -370,7 +386,7 @@ module MiniRecord
               logger.debug "[MiniRecord] Removing index #{name} on #{table_name}" if logger
               connection.remove_index(table_name, :name => name) unless dry_run
             end
-            
+
           end
 
           if connection.tables.include?(table_name)

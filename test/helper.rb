@@ -1,5 +1,6 @@
 require 'rubygems' unless defined?(Gem)
 require 'bundler/setup'
+require 'logger'
 require 'mini_record'
 require 'minitest/autorun'
 
@@ -39,24 +40,25 @@ class ActiveRecord::Base
 
     def auto_upgrade!(*args)
       ActiveRecord::Base.logs = StringIO.new
-      ActiveRecord::Base.logger = ActiveSupport::BufferedLogger.new(ActiveRecord::Base.logs)
+      ActiveRecord::Base.logger = Logger.new(ActiveRecord::Base.logs)
       silence_stream(STDERR) { super }
     end
 
     def auto_upgrade_dry
       ActiveRecord::Base.logs = StringIO.new
-      ActiveRecord::Base.logger = ActiveSupport::BufferedLogger.new(ActiveRecord::Base.logs)
+      ActiveRecord::Base.logger = Logger.new(ActiveRecord::Base.logs)
       silence_stream(STDERR) { super }
     end
   end
 end # ActiveRecord::Base
 
-# Setup Adatper
+# Setup Adapter
+puts "Testing with DB=#{ENV['DB'] || 'sqlite'}"
 case ENV['DB']
 when 'mysql'
-  ActiveRecord::Base.establish_connection(:adapter => 'mysql', :database => 'test', :user => 'root')
+  ActiveRecord::Base.establish_connection(:adapter => 'mysql', :database => 'test', :username => 'root')
 when 'mysql2'
-  ActiveRecord::Base.establish_connection(:adapter => 'mysql2', :database => 'test', :user => 'root')
+  ActiveRecord::Base.establish_connection(:adapter => 'mysql2', :database => 'test', :username => 'root')
   Bundler.require(:test)  # require 'foreigner'
   Foreigner.load
 when 'pg', 'postgresql'
