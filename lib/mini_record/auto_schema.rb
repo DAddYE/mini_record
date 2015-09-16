@@ -320,7 +320,14 @@ module MiniRecord
                 table = if name = association.options[:join_table]
                           name.to_s
                         else
-                          [table_name, association.name.to_s].sort.join("_")
+                          association_table_name = association.name.to_s.classify.constantize.table_name
+                          table_name_substrings  = [table_name,association_table_name].collect { |string| string.split('_') }
+                          common_substrings      = Array.new
+                          table_name_substrings.first.each_index { |i| table_name_substrings.first[i] == table_name_substrings.last[i] ? common_substrings.push(table_name_substrings.first[i]) : break }
+                          common_prefix          = common_substrings.join('_')
+                          table_names            = [table_name,association_table_name].sort
+                          table_names.last.gsub!(/^#{common_prefix}_/,'')
+                          table_names.join("_")
                         end
                 unless connection.tables.include?(table.to_s)
                   foreign_key             = association.options[:foreign_key] || association.foreign_key
