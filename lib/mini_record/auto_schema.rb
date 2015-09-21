@@ -325,7 +325,7 @@ module MiniRecord
                           common_substrings      = Array.new
                           table_name_substrings.first.each_index { |i| table_name_substrings.first[i] == table_name_substrings.last[i] ? common_substrings.push(table_name_substrings.first[i]) : break }
                           common_prefix          = common_substrings.join('_')
-                          table_names            = [table_name,association_table_name].sort
+                          table_names            = [table_name.clone,association_table_name.clone].sort
                           table_names.last.gsub!(/^#{common_prefix}_/,'')
                           table_names.join("_")
                         end
