@@ -418,7 +418,8 @@ module MiniRecord
           # Add indexes
           indexes.each do |name, options|
             options = options.dup
-            index_name = (options[:name] || name).to_s
+            adjusted_index_name = "index_#{table_name}_on_" + (options[:column].is_a?(Array) ? options[:column].join('_and_') : options[:column]).to_s
+            index_name = (options[:name] || adjusted_index_name).to_s
             unless connection.indexes(table_name).detect { |i| i.name == index_name }
               logger.debug "[MiniRecord] Adding index #{index_name} #{options[:column].inspect} on #{table_name}" if logger
               connection.add_index(table_name, options.delete(:column), options) unless dry_run
