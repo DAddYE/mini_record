@@ -114,7 +114,7 @@ module MiniRecord
           #   t.column :type, "ENUM('EMPLOYEE','CLIENT','SUPERUSER','DEVELOPER')"
           if type.is_a?(String)
             # will be converted in: t.column :type, "ENUM('EMPLOYEE','CLIENT')"
-            options.reverse_merge!(:limit => 0) unless postgresql_range?(type)
+            options.reverse_merge!(:limit => 0) unless postgresql_limitless_column?(type)
             table_definition.column(column_name, type, options)
           else
             # wil be converted in: t.string :name
@@ -139,9 +139,9 @@ module MiniRecord
       alias :property  :field
       alias :col       :field
 
-      def postgresql_range? type
+      def postgresql_limitless_column? type
         return unless connection.is_a?(ActiveRecord::ConnectionAdapters::PostgreSQLAdapter)
-        type =~ /range/
+        type =~ /range|json/i
       end
 
       def timestamps
