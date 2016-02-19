@@ -239,7 +239,7 @@ module MiniRecord
         # Next, iterate through our extended attributes, looking for any differences
         # This catches stuff like :null, :precision, etc
         # Ignore junk attributes that different versions of Rails include
-        [:name, :limit, :precision, :scale, :default, :null, :type].each do |att|
+        [:name, :limit, :precision, :scale, :default, :null,:type].each do |att|
           value = fields[field][att]
           value = true if att == :null && value.nil?
 
