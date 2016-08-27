@@ -1,4 +1,4 @@
-﻿module MiniRecord
+module MiniRecord
   module AutoSchema
     def self.included(base)
       base.extend(ClassMethods)
