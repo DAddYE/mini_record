@@ -1,4 +1,4 @@
-module MiniRecord
+﻿module MiniRecord
   module AutoSchema
     def self.included(base)
       base.extend(ClassMethods)
@@ -19,8 +19,11 @@ module MiniRecord
           # Rails 4.1
           ActiveRecord::ConnectionAdapters::TableDefinition.new(connection.native_database_types, table_name, false, {}, nil)
         when -4
-          # Rails 5
+          # Rails 5 beta
           ActiveRecord::ConnectionAdapters::TableDefinition.new(table_name, false, {}, nil)
+        when -2
+          # Rails 5
+          ActiveRecord::ConnectionAdapters::TableDefinition.new(table_name)
         else
           raise ArgumentError,
             "Unsupported number of args for ActiveRecord::ConnectionAdapters::TableDefinition.new()"
