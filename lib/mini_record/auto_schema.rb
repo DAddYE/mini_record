@@ -414,7 +414,7 @@ module MiniRecord
               end
             end
 
-            remove_foreign_keys(@dry_run) if connection.respond_to?(:foreign_keys)
+            remove_foreign_keys if connection.respond_to?(:foreign_keys)
 
             # Remove old index
             index_names = indexes.collect{ |name, opts| (opts[:name] || name).to_s }
