@@ -270,14 +270,18 @@ module MiniRecord
           if att == :default
             # Rails 4.2 changed behavior to pass DB values directly through, so we must re-map
             if value.to_s =~ /^(false|f|0)$/i
-              attr_changed = true if old_value.to_s !~ /^(false|f|0)$/i
+              attr_changed = true if old_value.to_s !~ /^(false|f|0)(\.0+|)$/i
             elsif value.to_s =~ /^(true|t|1)$/i
               attr_changed = true if old_value.to_s !~ /^(true|t|1)$/i
-            elsif value.to_s != old_value.to_s
+            elsif value.to_s.sub(/\.0+\Z/, "") != old_value.to_s.sub(/\.0+\Z/, "") # ignore trailing zeroes after a decimal point
               attr_changed = true
             end
           elsif value != old_value
             attr_changed = true
+          end
+
+          if [:precision, :scale].include?(att)
+            new_attr[att] = value
           end
 
           if attr_changed
@@ -452,7 +456,7 @@ module MiniRecord
             end
           end
 
-          add_foreign_keys(@dry_run) if connection.respond_to?(:foreign_keys)
+          add_foreign_keys if connection.respond_to?(:foreign_keys)
 
           # Reload column information
           reset_column_information
@@ -465,7 +469,12 @@ module MiniRecord
         elsif MiniRecord.configuration.raise_on_destructive_change_needed == true
           @dry_run = true
           yield
-          raise "Previous action was potentially Destructive and therefore not performed. Please run the above migration manually for safety."
+          message = "[MiniRecord] Destructive changes are needed to update your database to match the schema, and you have the `raise_on_destructive_change_needed` option in Mini Record enabled.  Please enable destructive mode and re-run, or make this change manually."
+          if logger
+            logger.error " - This change was not performed!"
+            logger.error(message)
+          end
+          raise "#{message} If you can't see the change needed, check your Rails logs."
         end
       end
     end # ClassMethods

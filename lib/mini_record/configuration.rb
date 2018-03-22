@@ -11,7 +11,7 @@ module MiniRecord
   def self.reset_configuration!
     self.configuration = Configuration.new
   end
-  
+
   class Configuration
     attr_accessor :destructive, :raise_on_destructive_change_needed
 
