@@ -462,7 +462,7 @@ module MiniRecord
       def perform_destructive_action
         if MiniRecord.configuration.destructive == true
           yield
-        elsif Minirecord.configuration.raise_on_destructive_change_needed == true
+        elsif MiniRecord.configuration.raise_on_destructive_change_needed == true
           @dry_run = true
           yield
           raise "Previous action was potentially Destructive and therefore not performed. Please run the above migration manually for safety."
