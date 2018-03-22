@@ -41,13 +41,13 @@ class ActiveRecord::Base
     def auto_upgrade!(*args)
       ActiveRecord::Base.logs = StringIO.new
       ActiveRecord::Base.logger = Logger.new(ActiveRecord::Base.logs)
-      silence_stream(STDERR) { super }
+      #silence_stream(STDERR) { super }
     end
 
     def auto_upgrade_dry
       ActiveRecord::Base.logs = StringIO.new
       ActiveRecord::Base.logger = Logger.new(ActiveRecord::Base.logs)
-      silence_stream(STDERR) { super }
+     # silence_stream(STDERR) { super }
     end
   end
 end # ActiveRecord::Base
