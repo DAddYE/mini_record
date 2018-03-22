@@ -19,8 +19,13 @@ module MiniRecord
           # Rails 4.1
           ActiveRecord::ConnectionAdapters::TableDefinition.new(connection.native_database_types, table_name, false, {}, nil)
         else
-          raise ArgumentError,
-            "Unsupported number of args for ActiveRecord::ConnectionAdapters::TableDefinition.new()"
+          # Rails 5.0
+          if ActiveRecord::ConnectionAdapters::TableDefinition.instance_method(:initialize).parameters.size == 5
+            ActiveRecord::ConnectionAdapters::TableDefinition.new(table_name)
+          else
+            raise ArgumentError,
+              "Unsupported number of args for ActiveRecord::ConnectionAdapters::TableDefinition.new()"
+          end
         end
       end
 
@@ -29,7 +34,9 @@ module MiniRecord
       end
 
       def table_definition
-        return superclass.table_definition unless (superclass == ActiveRecord::Base) || (superclass.respond_to?(:abstract_class?) && superclass.abstract_class?)
+        unless (superclass == ActiveRecord::Base) || (superclass.respond_to?(:abstract_class?) && superclass.abstract_class?)
+          return superclass.table_definition
+        end
 
         @_table_definition ||= begin
           tb = init_table_definition(connection)
@@ -39,21 +46,24 @@ module MiniRecord
       end
 
       def indexes
-        return superclass.indexes unless (superclass == ActiveRecord::Base) || (superclass.respond_to?(:abstract_class?) && superclass.abstract_class?)
+        unless (superclass == ActiveRecord::Base) || (superclass.respond_to?(:abstract_class?) && superclass.abstract_class?)
+          return superclass.indexes
+        end
 
         @_indexes ||= {}
       end
 
       def suppressed_indexes
-        return superclass.suppressed_indexes unless (superclass == ActiveRecord::Base) || (superclass.respond_to?(:abstract_class?) && superclass.abstract_class?)
+        unless (superclass == ActiveRecord::Base) || (superclass.respond_to?(:abstract_class?) && superclass.abstract_class?)
+          return superclass.suppressed_indexes
+        end
 
         @_suppressed_indexes ||= {}
       end
 
       def indexes_in_db
-        connection.indexes(table_name).inject({}) do |hash, index|
+        connection.indexes(table_name).each_with_object({}) do |index, hash|
           hash[index.name] = index
-          hash
         end
       end
 
@@ -185,7 +195,7 @@ module MiniRecord
 
       def clear_tables!(dry_run = false)
         return unless MiniRecord.configuration.destructive == true
-        (connection.tables - schema_tables).each do |name|
+        (connection.data_sources - schema_tables).each do |name|
           logger.debug "[MiniRecord] Dropping table #{name}" if logger
           unless dry_run
             connection.drop_table(name)
@@ -289,7 +299,7 @@ module MiniRecord
           clear_tables!(dry_run)
         else
           # If table doesn't exist, create it
-          unless connection.tables.include?(table_name)
+          unless connection.data_sources.include?(table_name)
             class << connection; attr_accessor :table_definition; end unless connection.respond_to?(:table_definition=)
             logger.debug "[MiniRecord] Creating Table #{table_name}" if logger
             unless dry_run
@@ -329,7 +339,7 @@ module MiniRecord
                           table_names.last.gsub!(/^#{common_prefix}_/,'')
                           table_names.join("_")
                         end
-                unless connection.tables.include?(table.to_s)
+                unless connection.data_sources.include?(table.to_s)
                   foreign_key             = association.options[:foreign_key] || association.foreign_key
                   association_foreign_key = association.options[:association_foreign_key] || association.association_foreign_key
                   logger.debug "[MiniRecord] Creating Join Table #{table} with keys #{foreign_key} and #{association_foreign_key}" if logger
@@ -357,7 +367,7 @@ module MiniRecord
           end
 
           # Group Destructive Actions
-          if MiniRecord.configuration.destructive == true and connection.tables.include?(table_name)
+          if MiniRecord.configuration.destructive == true and connection.data_sources.include?(table_name)
 
             # Rename fields
             rename_fields.each do |old_name, new_name|
@@ -402,7 +412,7 @@ module MiniRecord
 
           end
 
-          if connection.tables.include?(table_name)
+          if connection.data_sources.include?(table_name)
             # Add fields to db new to schema
             columns_to_add = fields.keys - fields_in_db.keys
             columns_to_add.each do |field|
