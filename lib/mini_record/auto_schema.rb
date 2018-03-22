@@ -250,7 +250,11 @@ module MiniRecord
         # This catches stuff like :null, :precision, etc
         # Ignore junk attributes that different versions of Rails include
         [:name, :limit, :precision, :scale, :default, :null].each do |att|
-          value = fields[field][att]
+          if fields[field].respond_to? :members
+            value = fields[field].members.include?(att) ? fields[field][att] : nil
+          else
+            value = fields[field][att]
+          end
           value = true if att == :null && value.nil?
 
           # Skip unspecified limit/precision/scale as DB will set them to defaults,
