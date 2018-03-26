@@ -266,6 +266,8 @@ module MiniRecord
           old_value = fields_in_db[field].send(att)
           # puts "#{field_name}[#{att}] = #{value.inspect} vs #{old_value.inspect}"
 
+          old_value = 0 if att == :scale and old_value.nil? and value == 0
+
           attr_changed = false
           if att == :default
             # Rails 4.2 changed behavior to pass DB values directly through, so we must re-map
