@@ -282,14 +282,11 @@ module MiniRecord
             attr_changed = true
           end
 
-          if [:precision, :scale].include?(att)
-            new_attr[att] = value
-          end
+          new_attr[att] = value
 
           if attr_changed
             logger.warn "[MiniRecord] Detected schema change for #{table_name}.#{field}##{att} " +
                          "from #{old_value.inspect} to #{value.inspect}" if logger
-            new_attr[att] = value
             changed ||= attr_changed
           end
         end
@@ -380,7 +377,6 @@ module MiniRecord
             index inheritance_column
           end
 
-          # Group Destructive Actions
           if connection.data_sources.include?(table_name)
 
             # Rename fields
@@ -433,14 +429,11 @@ module MiniRecord
             end
 
             if @destructive_change_needed
-              message = "[MiniRecord] Destructive changes are needed to update your database to match the schema, and you have the `raise_on_destructive_change_needed` option in Mini Record enabled.  Please enable destructive mode and re-run, or make this change manually."
+              message = "[MiniRecord] Destructive changes are needed to update your database to match the schema, and you have the `destructive` option in Mini Record set to `false`.  Please enable destructive mode and re-run, or make this change manually."
               logger.error message
               raise "#{message} If you can't see the change needed, check your Rails logs." if MiniRecord.configuration.raise_on_destructive_change_needed == true
             end
 
-          end
-
-          if connection.data_sources.include?(table_name)
             # Add fields to db new to schema
             columns_to_add = fields.keys - fields_in_db.keys
             columns_to_add.each do |field|
@@ -451,21 +444,21 @@ module MiniRecord
               logger.warn "[MiniRecord] Adding column #{table_name}.#{column.name}" if logger
               connection.add_column table_name, column.name, column.type.to_sym, options unless @dry_run
             end
-          end
 
-          # Add indexes
-          indexes.each do |name, options|
-            options = options.dup
-            options.delete(:foreign)
-            adjusted_index_name = "index_#{table_name}_on_" + (options[:column].is_a?(Array) ? options[:column].join('_and_') : options[:column]).to_s
-            index_name = (options[:name] || adjusted_index_name).to_s
-            unless connection.indexes(table_name).detect { |i| i.name == index_name }
-              logger.warn "[MiniRecord] Adding index #{index_name} #{options[:column].inspect} on #{table_name}" if logger
-              connection.add_index(table_name, options.delete(:column), options) unless @dry_run
+            # Add indexes
+            indexes.each do |name, options|
+              options = options.dup
+              options.delete(:foreign)
+              adjusted_index_name = "index_#{table_name}_on_" + (options[:column].is_a?(Array) ? options[:column].join('_and_') : options[:column]).to_s
+              index_name = (options[:name] || adjusted_index_name).to_s
+              unless connection.indexes(table_name).detect { |i| i.name == index_name }
+                logger.warn "[MiniRecord] Adding index #{index_name} #{options[:column].inspect} on #{table_name}" if logger
+                connection.add_index(table_name, options.delete(:column), options) unless @dry_run
+              end
             end
-          end
 
-          add_foreign_keys if connection.respond_to?(:foreign_keys)
+            add_foreign_keys if connection.respond_to?(:foreign_keys)
+          end
 
           # Reload column information
           reset_column_information
