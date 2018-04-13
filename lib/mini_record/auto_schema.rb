@@ -471,9 +471,11 @@ module MiniRecord
         if MiniRecord.configuration.destructive == true
           yield
         else
-          @destructive_change_needed = true
+          old_dry_run = @dry_run
+          @dry_run = @destructive_change_needed = true
           yield
           logger.error " - This change is destructive and was not performed!" if logger
+          @dry_run = old_dry_run
         end
       end
     end # ClassMethods
