@@ -471,11 +471,9 @@ module MiniRecord
         if MiniRecord.configuration.destructive == true
           yield
         else
-          converting_dry_run = !@dry_run
-          @dry_run = @destructive_change_needed = true
+          @destructive_change_needed = true
           yield
           logger.error " - This change is destructive and was not performed!" if logger
-          logger.error " - For safety, converting the rest of this migration run to a DRY RUN!" if logger and converting_dry_run
         end
       end
     end # ClassMethods
