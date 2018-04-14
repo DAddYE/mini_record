@@ -306,7 +306,7 @@ module MiniRecord
         @destructive_change_needed = false
 
         if self == ActiveRecord::Base
-          descendants.each { |model| @dry_run = model.auto_upgrade!(@dry_run) }
+          descendants.each { |model| model.auto_upgrade!(@dry_run) }
           clear_tables!
         else
           # If table doesn't exist, create it
@@ -463,8 +463,6 @@ module MiniRecord
           # Reload column information
           reset_column_information
         end
-
-        @dry_run
       end
 
       def perform_destructive_action
