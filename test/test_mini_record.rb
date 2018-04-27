@@ -1001,6 +1001,62 @@ describe MiniRecord do
     assert_match /CREATE TABLE.* extra options\Z/, Foo.queries
   end
 
+  it 'drops all non-defined tables if there is no table_whitelist' do
+    conn.create_table("other_table_a1")
+    conn.create_table("other_table_a2")
+    assert_includes conn.tables, "other_table_a1"
+    assert_includes conn.tables, "other_table_a2"
+
+    ActiveRecord::Base.auto_upgrade!
+    refute_includes conn.tables, "other_table_a1"
+    refute_includes conn.tables, "other_table_a2"
+  end
+
+  it 'drops non-defined tables except those specified by table_whitelist' do
+    MiniRecord.configuration.table_whitelist = ["other_table_a*", /table_b/, "other_table_c?"]
+    conn.create_table("other_table_a1")
+    conn.create_table("other_table_a2")
+    conn.create_table("other_table_b1")
+    conn.create_table("other_table_b2")
+    conn.create_table("other_table_c")
+    conn.create_table("other_table_c1")
+    conn.create_table("other_table_c2")
+    conn.create_table("other_table_d1")
+    conn.create_table("other_table_d2")
+    assert_includes conn.tables, "other_table_a1"
+    assert_includes conn.tables, "other_table_a2"
+    assert_includes conn.tables, "other_table_b1"
+    assert_includes conn.tables, "other_table_b2"
+    assert_includes conn.tables, "other_table_c"
+    assert_includes conn.tables, "other_table_c1"
+    assert_includes conn.tables, "other_table_c2"
+    assert_includes conn.tables, "other_table_d1"
+    assert_includes conn.tables, "other_table_d2"
+
+    ActiveRecord::Base.auto_upgrade!
+    assert_includes conn.tables, "other_table_a1"
+    assert_includes conn.tables, "other_table_a2"
+    assert_includes conn.tables, "other_table_b1"
+    assert_includes conn.tables, "other_table_b2"
+    refute_includes conn.tables, "other_table_c"
+    assert_includes conn.tables, "other_table_c1"
+    assert_includes conn.tables, "other_table_c2"
+    refute_includes conn.tables, "other_table_d1"
+    refute_includes conn.tables, "other_table_d2"
+  end
+
+  it 'keeps non-defined tables if destructive = false' do
+    MiniRecord.configuration.destructive = false
+    conn.create_table("other_table_a1")
+    conn.create_table("other_table_a2")
+    assert_includes conn.tables, "other_table_a1"
+    assert_includes conn.tables, "other_table_a2"
+
+    ActiveRecord::Base.auto_upgrade!
+    assert_includes conn.tables, "other_table_a1"
+    assert_includes conn.tables, "other_table_a2"
+  end
+
   it 'can do a dry run' do
     class Foo < ActiveRecord::Base
     end

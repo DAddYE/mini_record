@@ -195,12 +195,23 @@ module MiniRecord
 
       def clear_tables!
         (connection.data_sources - schema_tables).each do |name|
+          next if table_whitelist_match?(name)
           perform_destructive_action do
             logger.warn "[MiniRecord] Dropping table #{name}" if logger
             unless @dry_run
               connection.drop_table(name)
               schema_tables.delete(name)
             end
+          end
+        end
+      end
+
+      def table_whitelist_match?(table_name)
+        MiniRecord.configuration.table_whitelist.any? do |matcher|
+          if matcher.respond_to?(:to_str)
+            File.fnmatch?(matcher, table_name, File::FNM_CASEFOLD || File::FNM_DOTMATCH)
+          else
+            matcher === table_name
           end
         end
       end
