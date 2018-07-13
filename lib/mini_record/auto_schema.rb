@@ -117,6 +117,7 @@ module MiniRecord
         options    = args.extract_options!
         type       = options.delete(:as) || options.delete(:type) || :string
         index      = options.delete(:index)
+        virtual    = options.delete(:virtual)
 
         args.each do |column_name|
 
@@ -134,6 +135,9 @@ module MiniRecord
           # Get the correct column_name i.e. in field :category, :as => :references
           column_name = table_definition.columns[-1].name
 
+          # Set virtual hint.
+          table_definition.columns[-1].instance_variable_set(:@virtual, virtual) if virtual
+
           # Parse indexes
           case index
           when Hash
@@ -150,7 +154,7 @@ module MiniRecord
       alias :col       :field
 
       def postgresql_limitless_column? type
-        return unless connection.is_a?(ActiveRecord::ConnectionAdapters::PostgreSQLAdapter)
+        return unless defined?(ActiveRecord::ConnectionAdapters::PostgreSQLAdapter) and connection.is_a?(ActiveRecord::ConnectionAdapters::PostgreSQLAdapter)
         type =~ /range|json/i
       end
 
@@ -453,7 +457,13 @@ module MiniRecord
               options[:default] = column.default unless column.default.nil?
               options[:null]    = column.null    unless column.null.nil?
               logger.warn "[MiniRecord] Adding column #{table_name}.#{column.name}" if logger
-              connection.add_column table_name, column.name, column.type.to_sym, options unless @dry_run
+              if (virtual = column.instance_variable_get(:@virtual))
+                # Rails 4.x and 5.0 virtual column super-kludge.
+                column_type_sql = get_sql_field_type(column)
+                connection.add_column table_name, column.name, "#{column_type_sql} GENERATED ALWAYS AS (#{virtual}) VIRTUAL" unless @dry_run
+              else
+                connection.add_column table_name, column.name, column.type.to_sym, options unless @dry_run
+              end
             end
 
             # Add indexes
