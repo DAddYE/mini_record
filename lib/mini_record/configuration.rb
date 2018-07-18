@@ -11,12 +11,14 @@ module MiniRecord
   def self.reset_configuration!
     self.configuration = Configuration.new
   end
-  
+
   class Configuration
-    attr_accessor :destructive
+    attr_accessor :destructive, :raise_on_destructive_change_needed, :table_whitelist
 
     def initialize
       @destructive = true
+      @raise_on_destructive_change_needed = false
+      @table_whitelist = []
     end
   end
 end
