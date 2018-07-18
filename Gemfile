@@ -14,7 +14,7 @@ gem 'mysql2'
 # gem 'activerecord', '<= 3.2'
 # gem 'activerecord', '~> 4.0.0'
 # gem 'activerecord', '~> 4.1.0'
-gem 'activerecord', '>= 4.2.0'
+gem 'activerecord', '~> 4.2.0'
 
 group :test do
   gem 'foreigner', '>= 1.4.2'
