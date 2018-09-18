@@ -3,7 +3,7 @@ $:.push File.expand_path("../lib", __FILE__)
 require "mini_record/version"
 
 Gem::Specification.new do |s|
-  s.name        = "mini_record-cj"
+  s.name        = "mini_record"
   s.version     = MiniRecord::VERSION
   s.authors     = ["Davide D'Agostino"]
   s.email       = ["d.dagostino@lipsiasoft.com"]
