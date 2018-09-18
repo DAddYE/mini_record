@@ -177,6 +177,19 @@ class Fox < ActiveRecord::Base
 end
 ```
 
+## Versions
+
+### ActiveRecord 4.0.5 or lower
+
+If you are using ruby 2.1 and activerecord lower than or equal to 4.0.5 please
+use [fork-stable](https://github.com/acdcorp/mini_record/tree/fork-stable) or
+[0.3.7 tag/version](https://github.com/acdcorp/mini_record/tree/v0.3.7)
+
+### ActiveRecord >= 4.0.5 <= 4.2.10 and Ruby >= 2.3
+
+Please use this branch [0.3.8-acdcorp-stable](https://github.com/acdcorp/mini_record/tree/0.3.8-acdcorp-stable)
+or [0.3.8 tag/version](https://github.com/acdcorp/mini_record/tree/v0.3.8)
+
 ## Author
 
 DAddYE, you can follow me on twitter [@daddye](http://twitter.com/daddye) or take a look at my site [daddye.it](http://www.daddye.it)
