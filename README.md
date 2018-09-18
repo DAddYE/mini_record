@@ -187,8 +187,7 @@ use [fork-stable](https://github.com/acdcorp/mini_record/tree/fork-stable) or
 
 ### ActiveRecord >= 4.0.5 <= 4.2.10 and Ruby >= 2.3
 
-Please use this branch [0.3.8-acdcorp-stable](https://github.com/acdcorp/mini_record/tree/0.3.8-acdcorp-stable)
-or [0.3.8 tag/version](https://github.com/acdcorp/mini_record/tree/v0.3.8)
+Please use this branch [0.3-acdcorp-stable](https://github.com/acdcorp/mini_record/tree/0.3-acdcorp-stable)
 
 ## Author
 
