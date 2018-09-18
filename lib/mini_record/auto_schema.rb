@@ -92,6 +92,18 @@ module MiniRecord
         @@_mr_fake_columns[table_name] ||= {}
       end
 
+      # Lookup for registered ActiveRecord Types
+      # This in important for rails 4 and 5 due to ActiveRecord converts
+      # columns into object with the column type. Types depends from Connection
+      # Adapter.
+      # activerecord/lib/active_record/type/
+      # active_record/connection_adapters
+      # initialize_type_map defined the available types depending of
+      # database adapter.
+      def lookup_cast_type(type)
+        connection.lookup_cast_type(type)
+      end
+
       def field(*args)
         return unless connection?
 
@@ -108,6 +120,10 @@ module MiniRecord
           if fake
             # allow you to access the field on the instance object
             attr_accessor column_name
+            # ActiveRecord 4.2.x maps columns into types.
+            # Create a column symbol as type produced
+            # undefined method `type_cast_from_database' for :[boolean|string]:Symbol
+            type = lookup_cast_type(type) if defined?(ActiveRecord::Type)
             # create a column that column_hashes will understand (a fake row)
             fake_column = ActiveRecord::ConnectionAdapters::Column.new(
               column_name.to_s, nil, type, true
