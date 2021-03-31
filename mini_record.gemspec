@@ -24,7 +24,7 @@ Gem::Specification.new do |s|
 
   # specify any dependencies here; for example:
   # s.add_development_dependency "rspec"
-  s.add_runtime_dependency "activerecord", '~> 4.2'
+  s.add_runtime_dependency "activerecord", '~> 4.2.11'
 
   s.add_development_dependency 'rake'
   s.add_development_dependency 'minitest'

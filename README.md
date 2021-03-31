@@ -189,6 +189,10 @@ use [fork-stable](https://github.com/acdcorp/mini_record/tree/fork-stable) or
 
 Please use this branch [0.3-acdcorp-stable](https://github.com/acdcorp/mini_record/tree/0.3-acdcorp-stable)
 
+### ActiveRecord 4.2.11 and Ruby >= 2.5.5 and 2.6.6
+
+Please use version 0.3.11
+
 ## Author
 
 DAddYE, you can follow me on twitter [@daddye](http://twitter.com/daddye) or take a look at my site [daddye.it](http://www.daddye.it)
