@@ -189,9 +189,16 @@ use [fork-stable](https://github.com/acdcorp/mini_record/tree/fork-stable) or
 
 Please use this branch [0.3-acdcorp-stable](https://github.com/acdcorp/mini_record/tree/0.3-acdcorp-stable)
 
-### ActiveRecord 4.2.11 and Ruby >= 2.5.5 and 2.6.6
 
-Please use version 0.3.11
+### ActiveRecord 4.2.11 ruby 2.5.5 and 2.6.6
+
+Please use branch [0.3.11-acdcorp-activerecord4.2.11](https://github.com/acdcorp/mini_record/tree/0.3.11-acdcorp-activerecord4.2.11)
+
+## Development
+
+Master is the development branch of this gem for acdcorp because we can't
+change the official mini_record gem version unless we push our custom
+development.
 
 ## Author
 
