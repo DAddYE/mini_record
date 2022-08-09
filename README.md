@@ -200,6 +200,8 @@ Master is the development branch of this gem for acdcorp because we can't
 change the official mini_record gem version unless we push our custom
 development.
 
+Current version support Rails 6.0.1
+
 ## Author
 
 DAddYE, you can follow me on twitter [@daddye](http://twitter.com/daddye) or take a look at my site [daddye.it](http://www.daddye.it)
